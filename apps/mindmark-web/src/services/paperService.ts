@@ -419,8 +419,8 @@ const buildMockQualityReport = (items: PaperQuestion[], targetScore: number) => 
     items,
     (item) => [
       item.question.chapterNo !== null && item.question.chapterNo !== undefined
-        ? `? ${item.question.chapterNo} ?${item.question.chapterTitle ? ` ? ${item.question.chapterTitle}` : ''}`
-        : (item.question.chapterTitle ?? '???'),
+        ? `第 ${item.question.chapterNo} 章${item.question.chapterTitle ? ` · ${item.question.chapterTitle}` : ''}`
+        : (item.question.chapterTitle ?? '未分章'),
     ],
     (key) => key,
     actualScore,

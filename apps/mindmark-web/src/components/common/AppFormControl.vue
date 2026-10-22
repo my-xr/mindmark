@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, useAttrs } from 'vue';
 
 defineOptions({ inheritAttrs: false });

@@ -1,4 +1,4 @@
-﻿import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 const apiBaseUrl = process.env.MINDMARK_API_BASE_URL ?? 'http://localhost:8080';
 const teacherUsername = process.env.MINDMARK_TEACHER_USERNAME ?? 'teacher@mindmark.local';

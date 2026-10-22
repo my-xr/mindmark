@@ -780,12 +780,12 @@ public class PaperService {
 
     private String chapterLabel(QuestionEntity question) {
         if (question.getChapterNo() == null && !hasText(question.getChapterTitle())) {
-            return "???";
+            return "未分章";
         }
         if (question.getChapterNo() == null) {
             return question.getChapterTitle();
         }
-        return "? " + question.getChapterNo() + " ?" + (hasText(question.getChapterTitle()) ? " ? " + question.getChapterTitle() : "");
+        return "第 " + question.getChapterNo() + " 章" + (hasText(question.getChapterTitle()) ? " · " + question.getChapterTitle() : "");
     }
 
     private List<PaperComposeDistributionItemResponse> buildKnowledgePointDistribution(List<QualityQuestion> questions, BigDecimal totalScore) {

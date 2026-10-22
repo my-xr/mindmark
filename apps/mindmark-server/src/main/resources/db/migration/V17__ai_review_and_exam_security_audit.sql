@@ -1,4 +1,4 @@
-﻿DO $$
+DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_question_status') THEN
         ALTER TABLE question DROP CONSTRAINT ck_question_status;

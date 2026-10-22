@@ -1,4 +1,4 @@
-﻿ALTER TABLE paper
+ALTER TABLE paper
     ADD COLUMN IF NOT EXISTS course_id VARCHAR(64);
 
 UPDATE paper

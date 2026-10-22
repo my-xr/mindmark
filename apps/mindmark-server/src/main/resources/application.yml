@@ -76,6 +76,9 @@ mindmark:
     # Keep false for local development. Production should set this to true
     # and inject non-default secrets through the environment.
     strict-secrets: ${MINDMARK_SECURITY_STRICT_SECRETS:false}
+    # Only these reverse-proxy CIDRs may provide X-Forwarded-For. Leave empty
+    # when the service is exposed directly or through a local development proxy.
+    trusted-proxy-cidrs: ${MINDMARK_SECURITY_TRUSTED_PROXY_CIDRS:}
     login-rate-limit:
       window-seconds: ${MINDMARK_LOGIN_RATE_LIMIT_WINDOW_SECONDS:300}
       account-max-attempts: ${MINDMARK_LOGIN_RATE_LIMIT_ACCOUNT_MAX_ATTEMPTS:10}

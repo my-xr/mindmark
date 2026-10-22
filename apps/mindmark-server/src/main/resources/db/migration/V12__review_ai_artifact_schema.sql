@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS review_lecture_draft (
+CREATE TABLE IF NOT EXISTS review_lecture_draft (
     id VARCHAR(96) PRIMARY KEY,
     exam_id VARCHAR(64) NOT NULL REFERENCES exam(id) ON DELETE CASCADE,
     status VARCHAR(32) NOT NULL,

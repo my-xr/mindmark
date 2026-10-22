@@ -9,6 +9,7 @@ import com.mindmark.server.modules.auth.dto.LoginResponse;
 import com.mindmark.server.modules.auth.dto.LogoutResponse;
 import com.mindmark.server.modules.auth.service.AuthContextService;
 import com.mindmark.server.modules.auth.service.LoginRateLimiter;
+import com.mindmark.server.common.config.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +24,16 @@ public class AuthController {
 
     private final AuthContextService authContextService;
     private final LoginRateLimiter loginRateLimiter;
+    private final ClientIpResolver clientIpResolver;
 
-    public AuthController(AuthContextService authContextService, LoginRateLimiter loginRateLimiter) {
+    public AuthController(
+        AuthContextService authContextService,
+        LoginRateLimiter loginRateLimiter,
+        ClientIpResolver clientIpResolver
+    ) {
         this.authContextService = authContextService;
         this.loginRateLimiter = loginRateLimiter;
+        this.clientIpResolver = clientIpResolver;
     }
 
     @PostMapping("/login")
@@ -34,7 +41,7 @@ public class AuthController {
         @RequestBody(required = false) LoginRequest request,
         HttpServletRequest httpRequest
     ) {
-        loginRateLimiter.check(request, httpRequest.getRemoteAddr());
+        loginRateLimiter.check(request, clientIpResolver.resolve(httpRequest));
         return ApiResponse.success(authContextService.login(request));
     }
 

@@ -1,4 +1,4 @@
-﻿/* Visual alignment pass: page-level real-view audit and shared component alignment. */
+/* Visual alignment pass: page-level real-view audit and shared component alignment. */
 .portal-main > .portal-content,
 .student-layout > .student-content {
   margin-right: auto;

@@ -29,9 +29,11 @@
     "web:e2e:admin": "pnpm --filter mindmark-web exec playwright test e2e/admin-governance.spec.ts --project=teacher-chrome --reporter=line",
     "web:e2e:ai-failure": "pnpm --filter mindmark-web exec playwright test e2e/ai-provider-failure.spec.ts --project=teacher-chrome --reporter=line",
     "acceptance": "powershell -ExecutionPolicy Bypass -File scripts/run-local-acceptance.ps1",
+    "production:check": "powershell -ExecutionPolicy Bypass -File scripts/run-production-check.ps1",
     "server:smoke:grading": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-grading-ai-smoke.ps1",
     "server:smoke:bulk": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-bulk-experience-smoke.ps1",
     "server:smoke:rate-limit": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-login-rate-limit-smoke.ps1",
+    "server:smoke:chapter": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-chapter-scope-smoke.ps1",
     "web:e2e:bulk": "pnpm --filter mindmark-web exec playwright test e2e/teacher-bulk-visual.spec.ts --project=teacher-chrome --reporter=line",
     "web:e2e:student-visual": "pnpm --filter mindmark-web exec playwright test e2e/student-taking-visual.spec.ts --project=teacher-chrome --reporter=line"
   },

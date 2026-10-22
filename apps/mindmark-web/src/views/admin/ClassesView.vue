@@ -87,7 +87,7 @@ const loadChapters = async () => {
 
 const submitChapter = async () => {
   if (!selectedChapterCourseId.value || !chapterForm.title.trim()) {
-    errorMessage.value = '????????????';
+    errorMessage.value = '请选择课程并填写章节名称。';
     return;
   }
   saving.value = true;
@@ -95,7 +95,7 @@ const submitChapter = async () => {
   operationMessage.value = null;
   try {
     await createCourseChapter(selectedChapterCourseId.value, chapterForm);
-    operationMessage.value = '???????';
+    operationMessage.value = '课程章节已创建。';
     Object.assign(chapterForm, {
       chapterNo: Math.max(...chapters.value.map((chapter) => chapter.chapterNo), 0) + 1,
       title: '',
@@ -104,7 +104,7 @@ const submitChapter = async () => {
     });
     await loadChapters();
   } catch (error) {
-    errorMessage.value = getErrorMessage(error, '??????????????????');
+    errorMessage.value = getErrorMessage(error, '课程章节创建失败，请稍后重试。');
   } finally {
     saving.value = false;
   }
@@ -356,13 +356,13 @@ onMounted(loadData);
     <section class="content-card admin-section">
       <div class="section-title">
         <div>
-          <h2>??????</h2>
-          <p class="muted-text">???????????????????????? 1-8 ????</p>
+          <h2>课程章节管理</h2>
+          <p class="muted-text">为课程维护章节目录，题库和组卷可按章节范围筛选。</p>
         </div>
       </div>
       <div class="form-grid">
         <label class="form-field">
-          ??
+          课程
           <select
             v-model="selectedChapterCourseId"
             class="select-input"
@@ -374,36 +374,36 @@ onMounted(loadData);
           </select>
         </label>
         <label class="form-field">
-          ????
+          章节编号
           <input v-model.number="chapterForm.chapterNo" class="text-input" type="number" min="0" />
         </label>
         <label class="form-field">
-          ????
+          章节名称
           <input
             v-model.trim="chapterForm.title"
             class="text-input"
-            placeholder="? 1 ? JavaWeb ??"
+            placeholder="例如：第 1 章 JavaWeb 基础"
           />
         </label>
         <label class="form-field form-field--full">
-          ????
-          <input v-model.trim="chapterForm.description" class="text-input" placeholder="??" />
+          章节说明
+          <input v-model.trim="chapterForm.description" class="text-input" placeholder="可选" />
         </label>
       </div>
       <div class="form-actions">
         <AppActionButton variant="primary" :disabled="saving" @click="submitChapter"
-          >????</AppActionButton
+          >新增章节</AppActionButton
         >
       </div>
       <div class="data-table">
         <div class="data-row data-row--chapter data-row--head">
-          <span>??</span>
-          <span>??</span>
-          <span>??</span>
+          <span>章节</span>
+          <span>说明</span>
+          <span>状态</span>
         </div>
         <div v-for="chapter in chapters" :key="chapter.id" class="data-row data-row--chapter">
           <span
-            ><strong>? {{ chapter.chapterNo }} ? ? {{ chapter.title }}</strong></span
+            ><strong>第 {{ chapter.chapterNo }} 章 · {{ chapter.title }}</strong></span
           >
           <span>{{ chapter.description || '-' }}</span>
           <StatusTag :label="chapter.status" :tone="STATUS_TONE[chapter.status]" />

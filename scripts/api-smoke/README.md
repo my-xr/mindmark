@@ -71,6 +71,19 @@ powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-authz-security-sm
 - 学生只能读取本人班级考试关联的试卷；
 - 学生试卷题目响应中的 `answer`、`analysis`、`scoringPoints` 和审核元数据必须为空。
 
+生产前必须使用独立角色账号和明确的数据范围补充执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-authz-security-smoke.ps1 `
+  -RequireIndependentRoles `
+  -TeacherUsername <teacher> -TeacherPassword <password> `
+  -TaUsername <ta> -TaPassword <password> `
+  -StudentUsername <student> -StudentPassword <password> `
+  -AssignedCourseId <assigned-course-id> -OutOfScopeCourseId <other-course-id>
+```
+
+该模式会拒绝混合角色账号、验证 TA 不能访问管理员接口，并确认教师/TA 访问授权课程成功、访问未授权课程返回 `403`。
+
 ### 3.2 登录限流 Smoke
 
 该脚本使用随机生成的、不存在的账号，不修改任何已有用户数据。默认验证同一账号前 10 次失败登录返回 `401`，第 11 次触发账号维度限流并返回 `429`：
@@ -86,6 +99,14 @@ powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-login-rate-limit-
 powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-login-rate-limit-smoke.ps1 `
   -BaseUrl http://localhost:18082 `
   -AttemptCount 15
+```
+
+在测试实例将窗口缩短为 60 秒后，可额外验证窗口恢复；恢复请求应回到业务层 `401`：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-login-rate-limit-smoke.ps1 `
+  -BaseUrl http://localhost:18082 `
+  -AttemptCount 11 -RecoveryWaitSeconds 60
 ```
 
 Round 3 脚本覆盖：
@@ -120,10 +141,39 @@ scripts/api-smoke/mindmark-exam-loop.http
 - MinIO 当前为产物存储预留；P0 考试闭环接口不上传文件。
 - 生产 profile 使用 `--spring.profiles.active=prod` 时，必须注入数据库、Redis、AI 加密密钥和 MinIO 环境变量；生产禁止 `mindmark-local-ai-key-secret`、`minioadmin`、`minioadmin123` 等本地默认值。
 
-## 6. 验证记录
+## 6. Smoke 数据清理
+
+清理脚本默认只做 dry-run，并且要求明确的运行批次；不会因为一个通用的 `Smoke` 或 `E2E` 关键字误删业务数据：
+
+```powershell
+# 只查看某次运行的匹配范围、依赖统计和样本，报告写入 target/maintenance/
+powershell -ExecutionPolicy Bypass -File scripts/maintenance/cleanup-smoke-data.ps1 `
+  -RunId 20261022153000
+
+# 只有确认 dry-run 报告后，才允许带完整数据库备份执行删除
+powershell -ExecutionPolicy Bypass -File scripts/maintenance/cleanup-smoke-data.ps1 `
+  -RunId 20261022153000 -Execute -Force `
+  -BackupPath target/maintenance/mindmark-before-cleanup.dump
+```
+
+历史数据若没有可靠运行批次，只能显式加 `-IncludeLegacyPatterns` 后先审阅报告。脚本会检查题目是否仍被非目标试卷、答卷、批改或编程提交引用，发现外部依赖就中止；新增的课程章节、学生导入任务和审计记录也会纳入依赖清理顺序。JSON 报告会直接记录目标计数、样本和外部引用明细，`.log` 保留完整 psql 输出。
+
+## 7. 课程章节范围 Smoke
+
+该脚本会创建带运行批次的 JavaWeb 课程、1-10 章及每章题目，使用第 1-8 章范围组卷，并验证质量报告和 Markdown 指定章节导入：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-chapter-scope-smoke.ps1 `
+  -BaseUrl http://localhost:8080
+```
+
+脚本只创建带 `RunId` 的验收数据，不自动删除；完成审阅后用第 6 节的清理脚本按同一个 `RunId` dry-run，再在需要时带备份执行。
+
+## 8. 验证记录
 
 - 2026-07-18：已确认本地 PostgreSQL `mindmark` 数据库、`postgres/123456` 凭据可用，后端可完成 Flyway 启动。
 - 2026-07-18：Round 3 `run-exam-loop-smoke.ps1 -BaseUrl http://localhost:18081` 已通过，覆盖正常交卷、超时自动提交、缺考、批改、成绩发布与学生查分。
 - 2026-07-19：脚本已补充安全审计上报/查询、考前时间窗口冲突校验、AI 题目审核可选断言。
 - 2026-09-24：安全 Smoke 增加学生访问批改/复盘/教师工作台/AI Provider/安全审计以及教师访问学生接口的 `403` 断言；后端测试通过，真实权限 Smoke 已在 Redis 6379 和后端 18082 恢复后执行并通过。
 - 2026-09-24：登录限流 Smoke 通过；同一随机探测账号前 10 次返回 `401`，第 11 次返回 `429`。
+- 2026-10-22：章节范围 Smoke 真实 HTTP 通过（RunId `20261022210500`）；清理脚本同批次 dry-run 统计 1 门课程、10 个章节、11 道题目、1 套试卷，未执行删除。

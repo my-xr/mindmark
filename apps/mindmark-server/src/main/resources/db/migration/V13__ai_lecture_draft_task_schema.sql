@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS ai_lecture_draft_task (
+CREATE TABLE IF NOT EXISTS ai_lecture_draft_task (
     id VARCHAR(96) PRIMARY KEY,
     exam_id VARCHAR(64) NOT NULL REFERENCES exam(id) ON DELETE CASCADE,
     status VARCHAR(32) NOT NULL,

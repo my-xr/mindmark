@@ -1,4 +1,9 @@
 spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
   datasource:
     url: jdbc:postgresql://${MINDMARK_DB_HOST}:${MINDMARK_DB_PORT:5432}/${MINDMARK_DB_NAME}
     username: ${MINDMARK_DB_USERNAME}
@@ -9,9 +14,22 @@ spring:
       port: ${MINDMARK_REDIS_PORT:6379}
       password: ${MINDMARK_REDIS_PASSWORD:}
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
 mindmark:
   security:
     strict-secrets: true
+    trusted-proxy-cidrs: ${MINDMARK_SECURITY_TRUSTED_PROXY_CIDRS:}
   ai:
     key-secret: ${MINDMARK_AI_KEY_SECRET}
   storage:

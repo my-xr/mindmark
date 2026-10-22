@@ -1,4 +1,4 @@
-﻿-- Keep database constraints aligned with QuestionType / QuestionStatus enums after enterprise subjective question expansion.
+-- Keep database constraints aligned with QuestionType / QuestionStatus enums after enterprise subjective question expansion.
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_question_type') THEN

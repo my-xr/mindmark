@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS ai_provider_setting (
+CREATE TABLE IF NOT EXISTS ai_provider_setting (
     id VARCHAR(128) PRIMARY KEY,
     teacher_id VARCHAR(64) NOT NULL REFERENCES auth_user(id),
     provider VARCHAR(32) NOT NULL,

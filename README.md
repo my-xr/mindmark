@@ -1,4 +1,4 @@
-﻿# MindMark（明镜台）
+# MindMark（明镜台）
 
 MindMark 是面向院校 / 教师内部使用的智慧教考评一体化平台。当前阶段聚焦考试系统闭环：
 
@@ -36,10 +36,10 @@ pnpm server:run
 
 请先阅读 `docs/README.md`。
 
-## ??????
+## 后端与敏感配置
 
-- ??????`apps/mindmark-server`
-- ?? OpenAPI ???`apps/mindmark-server/openapi/mindmark-api.yaml`
-- ??? Swagger UI?`http://localhost:8080/swagger-ui/index.html`
+- 后端项目：`apps/mindmark-server`
+- OpenAPI 静态契约：`apps/mindmark-server/openapi/mindmark-api.yaml`
+- 本地 Swagger UI：`http://localhost:8080/swagger-ui/index.html`（仅在开启 OpenAPI 时可用）
 
-??????? Kimi API Key???????????????????
+本地启动默认连接 `localhost:5432/mindmark`、Redis `localhost:6379` 和 MinIO `localhost:9000`，完整环境变量示例见 `apps/mindmark-server/.env.example`。生产环境必须使用 `prod` profile，并注入独立的数据库、Redis、MinIO 凭据和 AI 加密密钥。任何 AI Provider Key 都只能通过教师个人配置或运行时环境变量注入，不能提交到仓库。

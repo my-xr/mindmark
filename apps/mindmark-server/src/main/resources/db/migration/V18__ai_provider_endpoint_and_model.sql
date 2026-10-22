@@ -1,4 +1,4 @@
-﻿ALTER TABLE ai_provider_setting
+ALTER TABLE ai_provider_setting
     ADD COLUMN IF NOT EXISTS base_url VARCHAR(512),
     ADD COLUMN IF NOT EXISTS model VARCHAR(128);
 

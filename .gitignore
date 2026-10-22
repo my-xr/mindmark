@@ -34,3 +34,6 @@ Thumbs.db
 # Test artifacts
 apps/*/test-results/
 apps/*/playwright-report/
+
+# 测试
+test/

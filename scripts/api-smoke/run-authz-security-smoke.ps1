@@ -3,7 +3,12 @@ param(
     [string]$TeacherUsername = "teacher@mindmark.local",
     [string]$TeacherPassword = "dev-password",
     [string]$StudentUsername = "20260722120655",
-    [string]$StudentPassword = "Mindmark123"
+    [string]$StudentPassword = "Mindmark123",
+    [string]$TaUsername = "",
+    [string]$TaPassword = "",
+    [string]$AssignedCourseId = "",
+    [string]$OutOfScopeCourseId = "",
+    [switch]$RequireIndependentRoles
 )
 
 $ErrorActionPreference = "Stop"
@@ -78,6 +83,21 @@ function Login([string]$Username, [string]$Password) {
     }
 }
 
+function Assert-IndependentRole([hashtable]$Session, [string]$Role, [string]$Label) {
+    $me = Invoke-Api GET "/api/v1/auth/me" -Headers $Session.Headers
+    $roles = @($me.data.roles | ForEach-Object { [string]$_ })
+    Assert-True ($roles.Count -eq 1 -and $roles[0] -eq $Role) "$Label must have only the $Role role; actual roles=$($roles -join ',')"
+}
+
+function Assert-CourseScope([hashtable]$Session, [string]$Label) {
+    if ([string]::IsNullOrWhiteSpace($AssignedCourseId) -or [string]::IsNullOrWhiteSpace($OutOfScopeCourseId)) {
+        return
+    }
+    Invoke-Api GET "/api/v1/courses/$AssignedCourseId/chapters" -Headers $Session.Headers | Out-Null
+    Invoke-Api GET "/api/v1/courses/$OutOfScopeCourseId/chapters" -Headers $Session.Headers -ExpectedStatus 403 -AllowBusinessFailure | Out-Null
+    Write-Host "[authz-smoke] $Label assigned/out-of-scope course boundary is enforced"
+}
+
 function Get-ChoiceOptionFingerprint([object]$Paper) {
     $parts = @(
         @($Paper.questions) |
@@ -94,6 +114,13 @@ function Get-ChoiceOptionFingerprint([object]$Paper) {
 
 Write-Host "[authz-smoke] BaseUrl=$BaseUrl"
 
+if ($RequireIndependentRoles -and ([string]::IsNullOrWhiteSpace($TaUsername) -or [string]::IsNullOrWhiteSpace($TaPassword))) {
+    throw "-RequireIndependentRoles requires -TaUsername and -TaPassword"
+}
+if ($RequireIndependentRoles -and ([string]::IsNullOrWhiteSpace($AssignedCourseId) -or [string]::IsNullOrWhiteSpace($OutOfScopeCourseId))) {
+    throw "-RequireIndependentRoles requires -AssignedCourseId and -OutOfScopeCourseId"
+}
+
 # A spoofed identity header must never create an authenticated session.
 $spoofed = @{
     "X-MindMark-User-Id" = "admin"
@@ -104,9 +131,29 @@ Write-Host "[authz-smoke] unauthenticated and spoofed-header requests are reject
 
 $teacher = Login $TeacherUsername $TeacherPassword
 $student = Login $StudentUsername $StudentPassword
+$ta = $null
+if (-not [string]::IsNullOrWhiteSpace($TaUsername) -or -not [string]::IsNullOrWhiteSpace($TaPassword)) {
+    if ([string]::IsNullOrWhiteSpace($TaUsername) -or [string]::IsNullOrWhiteSpace($TaPassword)) {
+        throw "-TaUsername and -TaPassword must be supplied together"
+    }
+    $ta = Login $TaUsername $TaPassword
+}
 
 $teacherHeaders = $teacher.Headers
 $studentHeaders = $student.Headers
+
+if ($RequireIndependentRoles) {
+    Assert-IndependentRole $teacher "TEACHER" "teacher account"
+    Assert-IndependentRole $ta "TA" "TA account"
+    Assert-IndependentRole $student "STUDENT" "student account"
+    Invoke-Api GET "/api/v1/admin/users?page=1&pageSize=1" -Headers $ta.Headers -ExpectedStatus 403 -AllowBusinessFailure | Out-Null
+    Assert-CourseScope $teacher "teacher"
+    Assert-CourseScope $ta "TA"
+    Write-Host "[authz-smoke] independent TEACHER/TA/STUDENT role profiles verified"
+} elseif ($null -ne $ta) {
+    Assert-CourseScope $ta "TA"
+}
+Assert-CourseScope $teacher "teacher"
 
 $paperPage = Invoke-Api GET "/api/v1/papers?page=1&pageSize=20" -Headers $teacherHeaders
 $examPage = Invoke-Api GET "/api/v1/exams?page=1&pageSize=20" -Headers $teacherHeaders

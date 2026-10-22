@@ -227,7 +227,7 @@ const chapterOptionsForCourse = (courseId?: string) => {
 };
 
 const chapterFilterOptions = computed(() => [
-  { label: '????', value: 'ALL' },
+  { label: '全部章节', value: 'ALL' },
   ...chapterOptionsForCourse(query.courseId),
 ]);
 

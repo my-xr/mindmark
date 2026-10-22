@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 export interface AppChoiceOption {
   disabled?: boolean;
   label: string;
