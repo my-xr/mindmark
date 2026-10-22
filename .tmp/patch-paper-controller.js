@@ -1,0 +1,10 @@
+﻿const fs=require('fs');
+const path='apps/mindmark-server/src/main/java/com/mindmark/server/modules/paper/web/PaperController.java';
+let s=fs.readFileSync(path,'utf8').replace(/^\uFEFF/,'');
+s=s.replace('import com.mindmark.server.modules.paper.dto.AddPaperQuestionRequest;\n', 'import com.mindmark.server.modules.paper.dto.AddPaperQuestionRequest;\nimport com.mindmark.server.modules.auth.service.AuthContextService;\nimport com.mindmark.server.modules.paper.dto.CreatePaperRequest;\n');
+s=s.replace('import org.springframework.web.bind.annotation.RequestBody;\n', 'import org.springframework.web.bind.annotation.RequestBody;\nimport org.springframework.web.bind.annotation.RequestHeader;\n');
+s=s.replace('    private final PaperService paperService;\n\n    public PaperController(PaperService paperService) {\n        this.paperService = paperService;\n    }\n', '    private final PaperService paperService;\n    private final AuthContextService authContextService;\n\n    public PaperController(PaperService paperService, AuthContextService authContextService) {\n        this.paperService = paperService;\n        this.authContextService = authContextService;\n    }\n');
+const anchor='    @GetMapping("/{paperId}")\n    public ApiResponse<PaperResponse> getPaper(@PathVariable String paperId) {';
+const method='    @PostMapping\n    public ApiResponse<PaperResponse> createPaper(\n        @RequestHeader(value = "Authorization", required = false) String authorization,\n        @Valid @RequestBody CreatePaperRequest request\n    ) {\n        return ApiResponse.success(paperService.createPaper(\n            request,\n            authContextService.getCurrentAuthUser(authorization, null, null)\n        ));\n    }\n\n';
+if(!s.includes('public ApiResponse<PaperResponse> createPaper(')) s=s.replace(anchor, method+anchor);
+fs.writeFileSync(path,s,'utf8');

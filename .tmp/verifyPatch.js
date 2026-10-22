@@ -1,0 +1,2 @@
+﻿const fs=require('fs'); const t=fs.readFileSync('apps/mindmark-server/src/main/java/com/mindmark/server/modules/grading/service/GradingTaskService.java','utf8');
+for(const n of ['public GradingTaskEntity createTaskForSubmittedAnswerSheet','item.setAiConfidence(new BigDecimal','item.setAiConfidence(result.confidence','item.setFinalScore(request.finalScore())']) { const i=t.indexOf(n); console.log('\n---',n,i); console.log(t.slice(i,i+600)); }

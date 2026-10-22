@@ -1,0 +1,2 @@
+import java.sql.*;
+public class DbRoleCols {public static void main(String[] a)throws Exception{try(Connection c=DriverManager.getConnection("jdbc:postgresql://localhost:5432/mindmark","postgres","123456"); PreparedStatement ps=c.prepareStatement("select column_name from information_schema.columns where table_name='auth_role' order by ordinal_position")){try(ResultSet r=ps.executeQuery()){while(r.next())System.out.println(r.getString(1));}}}}

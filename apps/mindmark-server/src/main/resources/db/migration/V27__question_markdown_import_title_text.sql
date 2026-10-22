@@ -1,0 +1,2 @@
+ALTER TABLE question
+    ALTER COLUMN title TYPE TEXT;

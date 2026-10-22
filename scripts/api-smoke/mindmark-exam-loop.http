@@ -1,0 +1,110 @@
+### MindMark Iteration 12 - exam closed-loop smoke requests
+### Prerequisite: backend is running at http://localhost:8080
+### Frontend real API mode: VITE_USE_MOCK=false pnpm web:dev
+
+@baseUrl = http://localhost:8080
+@studentId = student-001
+@paperId = paper-001
+@examId = exam-001
+@answerSheetId = AS-exam-001-student-001
+@gradingTaskId = GT-AS-exam-001-student-001
+
+### Health
+GET {{baseUrl}}/actuator/health
+
+### API Health
+GET {{baseUrl}}/api/v1/system/health
+
+### Question bank
+GET {{baseUrl}}/api/v1/questions?page=1&pageSize=20&status=ACTIVE
+
+### Papers
+GET {{baseUrl}}/api/v1/papers?page=1&pageSize=20
+
+### Paper detail
+GET {{baseUrl}}/api/v1/papers/{{paperId}}
+
+### Update paper status
+PATCH {{baseUrl}}/api/v1/papers/{{paperId}}/status
+Content-Type: application/json
+
+{
+  "status": "READY"
+}
+
+### Teacher exam list
+GET {{baseUrl}}/api/v1/exams
+
+### Create exam
+POST {{baseUrl}}/api/v1/exams
+Content-Type: application/json
+
+{
+  "title": "Frontend Engineering Runtime Smoke",
+  "paperId": "{{paperId}}",
+  "classIds": ["class-frontend-1"],
+  "startAt": "2026-07-17T14:00:00+08:00",
+  "endAt": "2026-07-17T15:30:00+08:00",
+  "durationMinutes": 90
+}
+
+### Get exam detail
+GET {{baseUrl}}/api/v1/exams/{{examId}}
+
+### Student exam list
+GET {{baseUrl}}/api/v1/student/exams?studentId={{studentId}}
+
+### Answer sheet detail
+GET {{baseUrl}}/api/v1/answer-sheets/{{answerSheetId}}
+
+### Answer sheet by exam and student
+GET {{baseUrl}}/api/v1/answer-sheets/by-exam/{{examId}}?studentId={{studentId}}
+
+### Save answer draft
+PUT {{baseUrl}}/api/v1/answer-sheets/{{answerSheetId}}/draft
+Content-Type: application/json
+
+{
+  "answers": [
+    { "questionId": "Q-1001", "answer": "B" },
+    { "questionId": "Q-1003", "answer": "False" },
+    { "questionId": "Q-1005", "answer": "Resources are identified by URIs and manipulated through HTTP methods such as GET, POST, PUT and DELETE." }
+  ],
+  "clientSavedAt": "2026-07-17T14:20:00+08:00"
+}
+
+### Submit answer sheet
+POST {{baseUrl}}/api/v1/answer-sheets/{{answerSheetId}}/submit
+
+### Grading tasks
+GET {{baseUrl}}/api/v1/grading-tasks
+
+### Auto grade
+POST {{baseUrl}}/api/v1/grading-tasks/{{gradingTaskId}}/auto-grade
+
+### Review grading item
+POST {{baseUrl}}/api/v1/grading-tasks/{{gradingTaskId}}/items/Q-1005/review
+Content-Type: application/json
+
+{
+  "finalScore": 6,
+  "comment": "Manual item review smoke."
+}
+
+### Review grading task
+POST {{baseUrl}}/api/v1/grading-tasks/{{gradingTaskId}}/review
+Content-Type: application/json
+
+{
+  "finalScore": 12,
+  "comment": "Runtime smoke review completed."
+}
+
+### Exam score summary
+GET {{baseUrl}}/api/v1/exams/{{examId}}/scores
+
+### Publish scores
+POST {{baseUrl}}/api/v1/exams/{{examId}}/publish-scores
+
+### Student score reports
+GET {{baseUrl}}/api/v1/student/score-reports?studentId={{studentId}}

@@ -1,0 +1,2 @@
+import java.sql.*;
+public class DbRolesQ {public static void main(String[] a)throws Exception{try(Connection c=DriverManager.getConnection("jdbc:postgresql://localhost:5432/mindmark","postgres","123456"); Statement s=c.createStatement(); ResultSet r=s.executeQuery("select * from auth_role order by code")){while(r.next()){System.out.println(r.getString(1)+"\t"+r.getString(2)+"\t"+r.getString(3));}}}}

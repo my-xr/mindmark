@@ -1,0 +1,6 @@
+const fs=require('fs');
+const f='apps/mindmark-server/src/main/java/com/mindmark/server/modules/grading/service/GradingAiJobService.java';
+let s=fs.readFileSync(f,'utf8');
+s=s.replace('    @Transactional\r\n    public GradingAiJobResponse enqueueIfNeeded(String gradingTaskId) {\r\n        if (!asyncEnabled) {', '    @Transactional\r\n    public GradingAiJobResponse enqueueIfNeeded(String gradingTaskId) {\r\n        return enqueue(gradingTaskId, true);\r\n    }\r\n\r\n    @Transactional\r\n    public GradingAiJobResponse enqueueSystemIfNeeded(String gradingTaskId) {\r\n        return enqueue(gradingTaskId, false);\r\n    }\r\n\r\n    private GradingAiJobResponse enqueue(String gradingTaskId, boolean checkScope) {\r\n        if (!asyncEnabled) {');
+s=s.replace('        classScopeService.requireCanAccessExam(task.getExam());\r\n        if (task.getStatus() == GradingTaskStatus.REVIEWED || !hasSubjectiveItem(task)) {', '        if (checkScope) {\r\n            classScopeService.requireCanAccessExam(task.getExam());\r\n        }\r\n        if (task.getStatus() == GradingTaskStatus.REVIEWED || !hasSubjectiveItem(task)) {');
+fs.writeFileSync(f,s,'utf8');

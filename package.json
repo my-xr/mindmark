@@ -1,0 +1,42 @@
+{
+  "name": "mindmark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MindMark intelligent teaching, exam and evaluation platform monorepo.",
+  "packageManager": "pnpm@11.8.0",
+  "scripts": {
+    "web:dev": "pnpm --filter mindmark-web dev",
+    "web:build": "pnpm --filter mindmark-web build",
+    "web:preview": "pnpm --filter mindmark-web preview",
+    "web:typecheck": "pnpm --filter mindmark-web typecheck",
+    "web:lint": "pnpm --filter mindmark-web lint",
+    "web:format": "pnpm --filter mindmark-web format",
+    "web:format:check": "pnpm --filter mindmark-web format:check",
+    "web:stylelint": "pnpm --filter mindmark-web stylelint",
+    "web:quality": "pnpm --filter mindmark-web quality",
+    "server:compile": "mvn -f apps/mindmark-server/pom.xml compile",
+    "server:test": "mvn -f apps/mindmark-server/pom.xml test",
+    "server:run": "mvn -f apps/mindmark-server/pom.xml spring-boot:run",
+    "server:package": "mvn -f apps/mindmark-server/pom.xml package",
+    "server:smoke": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-exam-loop-smoke.ps1",
+    "server:smoke:account": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-account-system-smoke.ps1",
+    "server:smoke:admin": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-admin-governance-smoke.ps1",
+    "server:smoke:ai": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-ai-question-loop-smoke.ps1",
+    "web:e2e": "pnpm --filter mindmark-web e2e",
+    "web:e2e:teacher": "pnpm --filter mindmark-web exec playwright test e2e/teacher-pages.spec.ts --project=teacher-chrome --reporter=line",
+    "web:e2e:student": "pnpm --filter mindmark-web exec playwright test e2e/student-exam-security.spec.ts --project=teacher-chrome --reporter=line",
+    "web:e2e:student-boundary": "pnpm --filter mindmark-web exec playwright test e2e/student-exam-entry-end-boundary.spec.ts --project=teacher-chrome --reporter=line",
+    "web:e2e:admin": "pnpm --filter mindmark-web exec playwright test e2e/admin-governance.spec.ts --project=teacher-chrome --reporter=line",
+    "web:e2e:ai-failure": "pnpm --filter mindmark-web exec playwright test e2e/ai-provider-failure.spec.ts --project=teacher-chrome --reporter=line",
+    "acceptance": "powershell -ExecutionPolicy Bypass -File scripts/run-local-acceptance.ps1",
+    "server:smoke:grading": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-grading-ai-smoke.ps1",
+    "server:smoke:bulk": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-bulk-experience-smoke.ps1",
+    "server:smoke:rate-limit": "powershell -ExecutionPolicy Bypass -File scripts/api-smoke/run-login-rate-limit-smoke.ps1",
+    "web:e2e:bulk": "pnpm --filter mindmark-web exec playwright test e2e/teacher-bulk-visual.spec.ts --project=teacher-chrome --reporter=line",
+    "web:e2e:student-visual": "pnpm --filter mindmark-web exec playwright test e2e/student-taking-visual.spec.ts --project=teacher-chrome --reporter=line"
+  },
+  "engines": {
+    "node": ">=20.19.0",
+    "pnpm": ">=10.0.0"
+  }
+}

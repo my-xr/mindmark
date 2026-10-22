@@ -1,0 +1,8 @@
+﻿from pathlib import Path
+p = Path('D:/vc/MindMark/apps/mindmark-web/src/views/teacher/ExamsView.vue')
+s = p.read_text(encoding='utf-8-sig')
+s = s.replace("const {\n  pagination: examPagination,\n  items: pagedExams,\n  resetPage: resetExamPage,\n  clampPage: clampExamPage,\n  handleChange: handleExamPaginationChange,\n} = useClientPagination(() => exams.value, 6);\n", "const {\n  pagination: examPagination,\n  items: pagedExams,\n  resetPage: resetExamPage,\n  clampPage: clampExamPage,\n  handleChange: handleExamPaginationChange,\n} = useClientPagination(() => exams.value, 6);\nconst {\n  pagination: classPagination,\n  items: pagedClasses,\n  clampPage: clampClassPage,\n  handleChange: handleClassPaginationChange,\n} = useClientPagination(() => classes.value, 8);\n")
+s = s.replace("    clampExamPage();\n", "    clampExamPage();\n    clampClassPage();\n", 1)
+s = s.replace('v-for="teachingClass in classes"', 'v-for="teachingClass in pagedClasses"')
+s = s.replace("            </div>\n            <p v-if=\"classes.length === 0\" class=\"muted-text\">\n", "            </div>\n            <EnterprisePagination\n              v-if=\"classes.length > 0\"\n              class=\"section-pagination exam-class-pagination\"\n              :current=\"classPagination.page\"\n              :page-size=\"classPagination.pageSize\"\n              :total=\"classes.length\"\n              :page-size-options=\"['8', '16', '32']\"\n              :disabled=\"loading\"\n              @change=\"handleClassPaginationChange\"\n            />\n            <p v-if=\"classes.length === 0\" class=\"muted-text\">\n", 1)
+p.write_text(s, encoding='utf-8', newline='\n')

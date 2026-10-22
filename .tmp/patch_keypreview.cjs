@@ -1,0 +1,1 @@
+﻿const fs=require('fs'); const p='apps/mindmark-web/src/services/aiQuestionService.ts'; let s=fs.readFileSync(p,'utf8'); s=s.replace('keyPreview: apiKey ? `****${apiKey.slice(-6)}` : previous.keyPreview,', 'keyPreview: apiKey ? `****${apiKey.slice(-6)}` : (previous.keyPreview ?? null),'); fs.writeFileSync(p,s,'utf8');

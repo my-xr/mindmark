@@ -1,0 +1,2 @@
+import java.sql.*;
+public class InspectConstraints { public static void main(String[] args)throws Exception{try(Connection c=DriverManager.getConnection("jdbc:postgresql://localhost:5432/mindmark","postgres","123456"); PreparedStatement ps=c.prepareStatement("select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid='question'::regclass order by conname")){try(ResultSet rs=ps.executeQuery()){while(rs.next())System.out.println(rs.getString(1)+" => "+rs.getString(2));}}}}

@@ -1,0 +1,28 @@
+:root {
+  --mm-color-primary: #2563eb;
+  --mm-color-primary-hover: #1d4ed8;
+  --mm-color-primary-soft: #eaf2ff;
+  --mm-color-accent: #06b6d4;
+  --mm-color-accent-soft: #ecfeff;
+  --mm-color-success: #16a34a;
+  --mm-color-warning: #f59e0b;
+  --mm-color-danger: #dc2626;
+  --mm-color-info: #0891b2;
+  --mm-color-text: #172033;
+  --mm-color-text-secondary: #64748b;
+  --mm-color-text-tertiary: #94a3b8;
+  --mm-color-border: #e6edf7;
+  --mm-color-border-strong: #d7e2f1;
+  --mm-color-bg: #f6f8fc;
+  --mm-color-card: #fff;
+  --mm-color-card-glass: rgb(255 255 255 / 84%);
+  --mm-space-xs: 4px;
+  --mm-space-sm: 8px;
+  --mm-space-md: 16px;
+  --mm-space-lg: 24px;
+  --mm-space-xl: 32px;
+  --mm-radius-md: 8px;
+  --mm-radius-lg: 12px;
+  --mm-shadow-card: 0 10px 28px rgb(15 23 42 / 6%);
+  --mm-shadow-card-hover: 0 18px 42px rgb(15 23 42 / 9%);
+}

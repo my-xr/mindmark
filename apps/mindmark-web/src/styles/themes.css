@@ -1,0 +1,384 @@
+/* Theme tokens and final visual overrides. Default is Light. */
+:root,
+:root[data-theme='light'] {
+  --mm-color-primary: #2563eb;
+  --mm-color-primary-hover: #1d4ed8;
+  --mm-color-primary-soft: #eaf2ff;
+  --mm-color-accent: #0ea5e9;
+  --mm-color-accent-soft: #ecfeff;
+  --mm-color-text: #172033;
+  --mm-color-text-secondary: #64748b;
+  --mm-color-text-tertiary: #94a3b8;
+  --mm-color-border: #e6edf7;
+  --mm-color-border-strong: #d7e2f1;
+  --mm-color-bg: #f6f8fc;
+  --mm-color-card: #fff;
+  --mm-color-card-glass: rgb(255 255 255 / 88%);
+  --mm-sidebar-bg: #fff;
+  --mm-sidebar-text: #172033;
+  --mm-sidebar-muted: #64748b;
+  --mm-sidebar-active-bg: #eef2ff;
+  --mm-sidebar-active-text: #1d4ed8;
+  --mm-sidebar-border: #e6edf7;
+  --mm-topbar-bg: #fff;
+}
+
+:root[data-theme='dark'] {
+  --mm-color-primary: #60a5fa;
+  --mm-color-primary-hover: #93c5fd;
+  --mm-color-primary-soft: #1d315b;
+  --mm-color-accent: #22d3ee;
+  --mm-color-accent-soft: #103846;
+  --mm-color-text: #e6edf7;
+  --mm-color-text-secondary: #aebbd0;
+  --mm-color-text-tertiary: #8290a6;
+  --mm-color-border: #2b3950;
+  --mm-color-border-strong: #3a4a62;
+  --mm-color-bg: #101827;
+  --mm-color-card: #182235;
+  --mm-color-card-glass: rgb(24 34 53 / 90%);
+  --mm-sidebar-bg: #121c2e;
+  --mm-sidebar-text: #e6edf7;
+  --mm-sidebar-muted: #9aa8bd;
+  --mm-sidebar-active-bg: rgb(96 165 250 / 18%);
+  --mm-sidebar-active-text: #d7e8ff;
+  --mm-sidebar-border: #2b3950;
+  --mm-topbar-bg: #151f31;
+}
+
+:root[data-theme='slate'] {
+  --mm-color-primary: #475569;
+  --mm-color-primary-hover: #334155;
+  --mm-color-primary-soft: #f1f5f9;
+  --mm-color-accent: #64748b;
+  --mm-color-accent-soft: #f8fafc;
+  --mm-color-bg: #f4f6f8;
+  --mm-color-card: #fff;
+  --mm-sidebar-bg: #f8fafc;
+  --mm-sidebar-text: #1f2937;
+  --mm-sidebar-muted: #64748b;
+  --mm-sidebar-active-bg: #e2e8f0;
+  --mm-sidebar-active-text: #0f172a;
+  --mm-sidebar-border: #dbe3ee;
+  --mm-topbar-bg: #fff;
+}
+
+:root[data-theme='ocean'] {
+  --mm-color-primary: #0284c7;
+  --mm-color-primary-hover: #0369a1;
+  --mm-color-primary-soft: #e0f2fe;
+  --mm-color-accent: #14b8a6;
+  --mm-color-accent-soft: #ccfbf1;
+  --mm-color-bg: #f3fbff;
+  --mm-color-card: #fff;
+  --mm-sidebar-bg: #f8fdff;
+  --mm-sidebar-text: #164e63;
+  --mm-sidebar-muted: #64748b;
+  --mm-sidebar-active-bg: #e0f2fe;
+  --mm-sidebar-active-text: #0369a1;
+  --mm-sidebar-border: #cfeef8;
+  --mm-topbar-bg: #fff;
+}
+
+:root[data-theme='forest'] {
+  --mm-color-primary: #16803c;
+  --mm-color-primary-hover: #166534;
+  --mm-color-primary-soft: #dcfce7;
+  --mm-color-accent: #65a30d;
+  --mm-color-accent-soft: #ecfccb;
+  --mm-color-bg: #f7fbf6;
+  --mm-color-card: #fff;
+  --mm-sidebar-bg: #fbfef9;
+  --mm-sidebar-text: #1f3a2d;
+  --mm-sidebar-muted: #5f766a;
+  --mm-sidebar-active-bg: #dcfce7;
+  --mm-sidebar-active-text: #166534;
+  --mm-sidebar-border: #d9ebdc;
+  --mm-topbar-bg: #fff;
+}
+
+:root body,
+#app,
+.portal-layout,
+.portal-main,
+.student-layout,
+.blank-layout {
+  background: var(--mm-color-bg);
+}
+
+.portal-content,
+.student-content {
+  color: var(--mm-color-text);
+  background: transparent;
+}
+
+.portal-layout > .portal-sidebar,
+.portal-sidebar.admin-sidebar {
+  color: var(--mm-sidebar-text);
+  background: var(--mm-sidebar-bg);
+  border-right: 1px solid var(--mm-sidebar-border);
+  box-shadow: none;
+}
+
+.portal-brand,
+.portal-menu .portal-menu-item {
+  color: var(--mm-sidebar-muted);
+}
+
+.portal-brand:hover,
+.portal-menu .portal-menu-item:hover,
+.portal-menu .portal-menu-item.active {
+  color: var(--mm-sidebar-active-text);
+  background: var(--mm-sidebar-active-bg);
+}
+
+.portal-menu .portal-menu-item.active::before {
+  background: var(--mm-color-primary);
+  box-shadow: none;
+}
+
+.portal-menu-emoji,
+.portal-menu .portal-menu-item.active .portal-menu-emoji {
+  background: var(--mm-color-card);
+  border-color: var(--mm-color-border);
+  box-shadow: none;
+}
+
+.portal-sidebar-footer {
+  color: var(--mm-sidebar-text);
+  background: var(--mm-color-bg);
+  border-color: var(--mm-sidebar-border);
+  box-shadow: none;
+}
+
+.portal-sidebar-footer span,
+.brand-copy small {
+  color: var(--mm-sidebar-muted);
+}
+
+.portal-topbar,
+.student-header {
+  background: var(--mm-topbar-bg);
+  border-color: var(--mm-color-border);
+}
+
+.portal-topbar-left > strong,
+.portal-content .page-header h1:not(.unused-page-header-title),
+.student-content .page-header h1:not(.unused-page-header-title),
+.blank-layout .page-header h1:not(.unused-page-header-title),
+.section-title h2,
+.exam-card h2,
+.prose-card h2,
+.preview-card h3,
+.question-pool-item h3,
+.paper-question-item h3,
+.metric-card strong {
+  color: var(--mm-color-text);
+}
+
+.content-card,
+.state-card,
+.auth-card,
+.filter-card,
+.preview-card,
+.question-panel,
+.question-card,
+.metric-card,
+.exam-list-card article.exam-row {
+  background: var(--mm-color-card);
+  border-color: var(--mm-color-border);
+}
+
+.dashboard-shortcut-item,
+.grading-task-button,
+.score-exam-button,
+.student-score-card,
+.review-exam-button,
+.paper-list-item,
+.question-pool-item,
+.paper-question-item,
+.audit-item,
+.selected-paper-card,
+.student-layer-list article,
+.question-performance-list article,
+.knowledge-diagnosis-list article,
+.lecture-outline,
+.grading-score-grid > div,
+.knowledge-feedback-list article,
+.question-feedback-list article,
+.taking-stat-grid article {
+  background: var(--mm-color-bg);
+  border-color: var(--mm-color-border);
+}
+
+.text-input,
+.select-input,
+.textarea-input,
+.theme-switcher select {
+  color: var(--mm-color-text);
+  background: var(--mm-color-card);
+  border-color: var(--mm-color-border-strong);
+}
+
+.user-chip,
+.sidebar-toggle-button,
+button.secondary-button,
+a.secondary-button {
+  color: var(--mm-color-text-secondary);
+  background: var(--mm-color-bg);
+  border-color: var(--mm-color-border-strong);
+}
+
+button.primary-button,
+a.primary-button {
+  background: var(--mm-color-primary);
+  box-shadow: none;
+}
+
+button.primary-button:hover:not(:disabled),
+a.primary-button:hover:not(:disabled) {
+  background: var(--mm-color-primary-hover);
+  box-shadow: none;
+}
+
+.theme-switcher {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--mm-color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.theme-switcher span {
+  color: var(--mm-color-text-tertiary);
+}
+
+.theme-switcher select {
+  min-height: 30px;
+  padding: 0 28px 0 9px;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--mm-color-border-strong);
+  border-radius: 6px;
+  outline: none;
+}
+
+:root[data-theme='dark'] .portal-layout,
+:root[data-theme='dark'] .student-layout,
+:root[data-theme='dark'] .blank-layout {
+  background:
+    radial-gradient(circle at 16% -10%, rgb(96 165 250 / 10%), transparent 30%),
+    linear-gradient(180deg, #121a2b 0%, var(--mm-color-bg) 42%, #0f1726 100%);
+}
+
+:root[data-theme='dark'] .content-card,
+:root[data-theme='dark'] .state-card,
+:root[data-theme='dark'] .auth-card,
+:root[data-theme='dark'] .filter-card,
+:root[data-theme='dark'] .preview-card,
+:root[data-theme='dark'] .question-panel,
+:root[data-theme='dark'] .question-card,
+:root[data-theme='dark'] .metric-card,
+:root[data-theme='dark'] .exam-list-card article.exam-row {
+  box-shadow: 0 10px 26px rgb(0 0 0 / 18%);
+}
+
+:root[data-theme='dark'] .content-card:hover,
+:root[data-theme='dark'] .filter-card:hover,
+:root[data-theme='dark'] .preview-card:hover {
+  border-color: #45566f;
+  box-shadow: 0 14px 32px rgb(0 0 0 / 24%);
+}
+
+:root[data-theme='dark'] .portal-menu-emoji,
+:root[data-theme='dark'] .portal-menu .portal-menu-item.active .portal-menu-emoji {
+  background: rgb(230 237 247 / 7%);
+  border-color: rgb(230 237 247 / 10%);
+}
+
+:root[data-theme='dark'] .text-input::placeholder,
+:root[data-theme='dark'] .textarea-input::placeholder {
+  color: #6f7d92;
+}
+
+:root[data-theme='dark'] .table-head,
+:root[data-theme='dark'] .student-account-row--head,
+:root[data-theme='dark'] .admin-user-row--head,
+:root[data-theme='dark'] .assignment-row--head {
+  color: var(--mm-color-text-secondary);
+  background: #111c2d;
+}
+
+:root[data-theme='dark'] .paper-list-item:hover,
+:root[data-theme='dark'] .paper-list-item--active,
+:root[data-theme='dark'] .grading-task-button--active,
+:root[data-theme='dark'] .score-exam-button--active,
+:root[data-theme='dark'] .student-score-card--active,
+:root[data-theme='dark'] .student-nav-item.active,
+:root[data-theme='dark'] .student-nav-item:hover {
+  color: var(--mm-color-primary-hover);
+  background: rgb(96 165 250 / 14%);
+  border-color: rgb(96 165 250 / 28%);
+}
+
+:root[data-theme='dark'] .question-order,
+:root[data-theme='dark'] .question-number-grid button.answered:not(.active) {
+  color: #93c5fd;
+  background: rgb(96 165 250 / 14%);
+  border-color: rgb(96 165 250 / 24%);
+}
+
+:root[data-theme='dark'] .question-number-grid button,
+:root[data-theme='dark'] .review-question-card,
+:root[data-theme='dark'] .admin-tabs,
+:root[data-theme='dark'] .assignment-user-card,
+:root[data-theme='dark'] .audit-item,
+:root[data-theme='dark'] .student-account-table,
+:root[data-theme='dark'] .admin-user-table,
+:root[data-theme='dark'] .assignment-table {
+  background: var(--mm-color-card);
+  border-color: var(--mm-color-border);
+}
+
+:root[data-theme='dark'] .admin-tabs button.active {
+  color: var(--mm-color-text);
+  background: rgb(96 165 250 / 14%);
+  box-shadow: none;
+}
+
+:root[data-theme='dark'] .state-card--error .state-card-icon {
+  color: #fca5a5;
+  background: rgb(127 29 29 / 26%);
+}
+
+:root[data-theme='dark'] .status-tag--default {
+  color: #cbd5e1;
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root[data-theme='dark'] .status-tag--info,
+:root[data-theme='dark'] .status-tag--processing {
+  color: #7dd3fc;
+  background: rgb(14 116 144 / 22%);
+  border-color: rgb(14 165 233 / 28%);
+}
+
+:root[data-theme='dark'] .status-tag--success {
+  color: #86efac;
+  background: rgb(22 101 52 / 24%);
+  border-color: rgb(34 197 94 / 28%);
+}
+
+:root[data-theme='dark'] .status-tag--warning {
+  color: #fde68a;
+  background: rgb(146 64 14 / 28%);
+  border-color: rgb(245 158 11 / 30%);
+}
+
+:root[data-theme='dark'] .status-tag--danger {
+  color: #fca5a5;
+  background: rgb(127 29 29 / 26%);
+  border-color: rgb(248 113 113 / 30%);
+}

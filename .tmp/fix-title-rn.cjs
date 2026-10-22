@@ -1,0 +1,7 @@
+const fs = require('fs');
+const p = 'apps/mindmark-web/src/views/teacher/PapersView.vue';
+let s = fs.readFileSync(p, 'utf8');
+s = s.replace(/:title="`r`n\s*isPaperDeleteDisabled\(selectedPaper\) \? '????????????' : '??????'`r`n\s*"/, `:title="
+                isPaperDeleteDisabled(selectedPaper) ? '????????????' : '??????'
+              "`);
+fs.writeFileSync(p, s, 'utf8');

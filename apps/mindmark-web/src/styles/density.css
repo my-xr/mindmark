@@ -1,0 +1,336 @@
+/* Layout density pass after global font-size reduction: keep pages balanced and avoid over-wide rows. */
+.portal-main > .portal-content,
+.student-layout > .student-content {
+  width: 100%;
+  max-width: 1360px;
+}
+
+.portal-content,
+.student-content {
+  padding: 20px 24px 30px;
+}
+
+.content-card,
+.state-card,
+.auth-card,
+.filter-card,
+.preview-card,
+.question-panel,
+.question-card {
+  padding: 16px;
+}
+
+.metric-card {
+  min-height: 104px;
+  padding: 16px;
+}
+
+.metric-card strong {
+  margin: 5px 0 3px;
+  font-size: 20px;
+}
+
+.content-card + .content-card,
+.filter-card + .content-card,
+.content-card + .filter-card {
+  margin-top: 14px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.section-title > div {
+  min-width: 0;
+}
+
+.section-title a:not(.primary-button, .secondary-button, .app-action-button) {
+  color: var(--mm-color-primary);
+  font-size: 12px;
+  font-weight: 560;
+  white-space: nowrap;
+}
+
+.task-list,
+.exam-card-list,
+.option-list,
+.ai-draft-list,
+.paper-question-list,
+.audit-timeline {
+  gap: 8px;
+}
+
+.task-item,
+.table-row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.filter-card--compact {
+  padding: 14px 16px;
+}
+
+.collapsible-filter-body {
+  margin-top: 10px;
+}
+
+.filter-grid,
+.admin-filter-grid,
+.assignment-form,
+.audit-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.form-field--wide {
+  grid-column: span 2;
+}
+
+button.primary-button,
+a.primary-button,
+button.secondary-button,
+a.secondary-button,
+.admin-tabs button {
+  min-height: 32px;
+  padding-right: 11px;
+  padding-left: 11px;
+}
+
+.text-input,
+.select-input,
+.textarea-input {
+  min-height: 34px;
+  padding: 6px 9px;
+}
+
+.dashboard-page {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-page .metric-grid {
+  margin-bottom: 0;
+}
+
+.dashboard-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(500px, 0.58fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.dashboard-task-card .task-list {
+  gap: 0;
+}
+
+.dashboard-task-card .task-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 0;
+}
+
+.dashboard-task-card .task-item > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contract-overview-card .contract-table {
+  margin-top: 12px;
+}
+
+.contract-overview-card .contract-row {
+  min-width: 560px;
+  grid-template-columns: 58px minmax(150px, 1fr) minmax(140px, 0.9fr) 56px;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.split-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 16px;
+}
+
+.preview-pane,
+.paper-list-card,
+.question-pool-card,
+.grading-task-list,
+.score-exam-list,
+.answer-card-panel {
+  top: 72px;
+}
+
+.paper-builder-layout {
+  grid-template-columns: minmax(220px, 250px) minmax(0, 1fr) minmax(260px, 310px);
+  gap: 16px;
+}
+
+.grading-layout,
+.score-layout,
+.student-score-layout,
+.review-layout,
+.assignment-layout {
+  grid-template-columns: minmax(250px, 292px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.two-column-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.taking-overview-card {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.taking-stat-grid,
+.paper-summary-grid,
+.grading-score-grid,
+.student-layer-grid,
+.review-metric-grid,
+.knowledge-diagnosis-list,
+.question-performance-list,
+.knowledge-feedback-list,
+.question-feedback-list {
+  gap: 10px;
+}
+
+.paper-list-item,
+.question-pool-item,
+.paper-question-item,
+.grading-task-button,
+.score-exam-button,
+.student-score-card,
+.review-exam-button,
+.selected-paper-card,
+.audit-item,
+.assignment-user-card {
+  padding: 10px 12px;
+}
+
+.question-table .question-row {
+  min-width: 740px;
+  grid-template-columns: minmax(220px, 1.45fr) 116px 132px 96px 96px;
+  gap: 10px;
+}
+
+.exam-list-card .exam-row {
+  min-width: 740px;
+  grid-template-columns: minmax(200px, 1.35fr) minmax(150px, 1fr) 140px 74px 92px;
+  gap: 10px;
+}
+
+.score-report-row {
+  min-width: 620px;
+  grid-template-columns: minmax(140px, 1fr) 130px 116px 82px 104px;
+  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.contract-row {
+  min-width: 560px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.student-account-row {
+  min-width: 760px;
+  grid-template-columns: minmax(160px, 1.25fr) 130px minmax(140px, 1fr) 108px 98px;
+  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.admin-user-row {
+  min-width: 840px;
+  grid-template-columns: minmax(170px, 1.35fr) minmax(150px, 1fr) 74px 108px 128px minmax(
+      160px,
+      1.2fr
+    );
+  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.assignment-row {
+  min-width: 620px;
+  grid-template-columns: minmax(160px, 1fr) 130px 170px 84px;
+  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.question-table,
+.exam-list-card,
+.score-report-table,
+.contract-table,
+.student-account-table,
+.admin-user-table,
+.assignment-table {
+  margin-right: -2px;
+  margin-left: -2px;
+}
+
+.overview-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.data-table {
+  gap: 0;
+  overflow-x: auto;
+}
+
+.data-row {
+  gap: 10px;
+  min-width: 620px;
+  padding: 9px 0;
+}
+
+.data-row--course {
+  grid-template-columns: minmax(180px, 1.6fr) 120px 110px 86px;
+}
+
+.data-row--five {
+  min-width: 760px;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(120px, 1fr) minmax(120px, 1fr) 96px 86px;
+}
+
+@media (width <= 1280px) {
+  .dashboard-secondary-grid,
+  .split-layout,
+  .paper-builder-layout,
+  .grading-layout,
+  .score-layout,
+  .student-score-layout,
+  .review-layout,
+  .assignment-layout,
+  .two-column-layout,
+  .taking-overview-card {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-pane,
+  .paper-list-card,
+  .question-pool-card,
+  .grading-task-list,
+  .score-exam-list,
+  .answer-card-panel {
+    position: static;
+  }
+}

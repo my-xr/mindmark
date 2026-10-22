@@ -1,0 +1,371 @@
+/* Page polish iteration: visual hierarchy, exam taking experience and auth entry. */
+:root body {
+  background:
+    radial-gradient(circle at top left, rgb(37 99 235 / 10%), transparent 28rem),
+    linear-gradient(180deg, #f8fbff 0%, var(--mm-color-bg) 38%, #eef3fb 100%);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 22%);
+  outline-offset: 2px;
+}
+
+button.primary-button,
+a.primary-button,
+button.secondary-button,
+a.secondary-button {
+  gap: 6px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+button.primary-button {
+  box-shadow: 0 10px 20px rgb(37 99 235 / 18%);
+}
+
+.primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.secondary-button:hover:not(:disabled) {
+  color: var(--mm-color-primary);
+  border-color: #bfdbfe;
+  box-shadow: 0 8px 18px rgb(15 23 42 / 8%);
+}
+
+.portal-layout > .portal-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background:
+    radial-gradient(circle at 24px 24px, rgb(96 165 250 / 30%), transparent 10rem),
+    linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  border-right: 1px solid rgb(255 255 255 / 10%);
+}
+
+.portal-sidebar.admin-sidebar {
+  background:
+    radial-gradient(circle at 24px 24px, rgb(129 140 248 / 24%), transparent 10rem),
+    linear-gradient(180deg, #111827 0%, #030712 100%);
+}
+
+.portal-menu .portal-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  font-weight: 650;
+}
+
+.portal-menu .portal-menu-item.active::before {
+  position: absolute;
+  left: 0;
+  width: 3px;
+  height: 18px;
+  content: '';
+  background: #93c5fd;
+  border-radius: 999px;
+}
+
+.portal-topbar,
+.student-header {
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 rgb(15 23 42 / 4%);
+}
+
+.portal-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+
+.portal-main > .portal-content,
+.student-layout > .student-content {
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.portal-content .page-header:not(.unused-page-header),
+.student-content .page-header:not(.unused-page-header),
+.blank-layout .page-header:not(.unused-page-header) {
+  padding: var(--mm-space-xs) 0;
+}
+
+.portal-content .page-header h1:not(.unused-page-header-title),
+.student-content .page-header h1:not(.unused-page-header-title),
+.blank-layout .page-header h1:not(.unused-page-header-title) {
+  letter-spacing: -0.02em;
+}
+
+.metric-card,
+.content-card,
+.state-card,
+.auth-card,
+.preview-card,
+.question-panel,
+.question-card {
+  border-color: #e2e8f0;
+  box-shadow: 0 16px 38px rgb(15 23 42 / 7%);
+}
+
+.content-card {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.metric-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::after {
+  position: absolute;
+  inset: auto -32px -40px auto;
+  width: 108px;
+  height: 108px;
+  pointer-events: none;
+  content: '';
+  background: rgb(37 99 235 / 8%);
+  border-radius: 999px;
+}
+
+.metric-card > strong {
+  letter-spacing: -0.03em;
+}
+
+.auth-card--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+  width: min(1040px, 100%);
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+}
+
+.auth-hero {
+  display: grid;
+  gap: var(--mm-space-xl);
+  align-content: space-between;
+  min-height: 620px;
+  padding: 42px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 78% 18%, rgb(125 211 252 / 28%), transparent 12rem),
+    radial-gradient(circle at 18% 76%, rgb(59 130 246 / 32%), transparent 14rem),
+    linear-gradient(135deg, #0f172a 0%, #1e3a8a 58%, #2563eb 100%);
+}
+
+.auth-brand {
+  justify-content: flex-start;
+}
+
+.auth-brand .brand-mark {
+  background: rgb(255 255 255 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 26%);
+}
+
+.auth-brand small,
+.auth-hero .soft-tag {
+  color: rgb(255 255 255 / 74%);
+}
+
+.auth-hero .soft-tag {
+  width: fit-content;
+  background: rgb(255 255 255 / 12%);
+  border-color: rgb(255 255 255 / 20%);
+}
+
+.auth-hero-copy h1 {
+  max-width: 520px;
+  margin: var(--mm-space-md) 0;
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.auth-hero-copy p {
+  max-width: 520px;
+  margin: 0;
+  color: rgb(255 255 255 / 78%);
+  line-height: 1.8;
+}
+
+.auth-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mm-space-md);
+}
+
+.auth-feature-grid article {
+  display: grid;
+  gap: 8px;
+  padding: var(--mm-space-md);
+  background: rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 7px;
+}
+
+.auth-feature-grid strong {
+  color: #bfdbfe;
+}
+
+.auth-feature-grid span {
+  color: rgb(255 255 255 / 82%);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.auth-form-panel {
+  display: grid;
+  gap: var(--mm-space-xl);
+  align-content: center;
+  padding: 42px;
+}
+
+.auth-form-panel h2 {
+  margin: 0 0 var(--mm-space-sm);
+  font-size: 16px;
+}
+
+.auth-actions--portal {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+article.student-exam-card {
+  position: relative;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+article.student-exam-card::before {
+  width: 4px;
+  content: '';
+  background: linear-gradient(180deg, var(--mm-color-primary), #38bdf8);
+  border-radius: 999px;
+}
+
+.student-exam-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-exam-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-space-sm) var(--mm-space-md);
+  color: var(--mm-color-text-secondary);
+  font-size: 12px;
+}
+
+.taking-overview-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, auto);
+  gap: var(--mm-space-lg);
+  align-items: center;
+  margin-bottom: var(--mm-space-lg);
+}
+
+.taking-overview-card h2 {
+  margin: var(--mm-space-sm) 0;
+  font-size: 16px;
+}
+
+.taking-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mm-space-sm);
+}
+
+.taking-stat-grid article {
+  padding: var(--mm-space-md);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.taking-stat-grid span {
+  display: block;
+  color: var(--mm-color-text-secondary);
+  font-size: 12px;
+}
+
+.taking-stat-grid strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.taking-progress-meter {
+  grid-column: 1 / -1;
+  height: 10px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.taking-progress-meter i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--mm-color-primary), #06b6d4);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+.question-answer-card {
+  min-width: 0;
+}
+
+.question-answer-card h2 {
+  margin: var(--mm-space-lg) 0;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.question-editor-header,
+.answer-card-header {
+  display: flex;
+  gap: var(--mm-space-md);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.option-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--mm-space-sm);
+  align-items: start;
+  line-height: 1.7;
+}
+
+.option-item:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 8px 18px rgb(37 99 235 / 8%);
+}
+
+.option-item--selected {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.answer-input {
+  margin-top: var(--mm-space-md);
+}
+
+.answer-card-panel {
+  position: sticky;
+  top: 88px;
+  height: fit-content;
+  box-shadow: 0 16px 38px rgb(15 23 42 / 7%);
+}
+
+.answer-card-summary {
+  padding: var(--mm-space-sm) 0 var(--mm-space-md);
+}

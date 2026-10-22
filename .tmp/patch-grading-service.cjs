@@ -1,0 +1,18 @@
+const fs=require('fs');
+const f='apps/mindmark-server/src/main/java/com/mindmark/server/modules/grading/service/GradingTaskService.java';
+let s=fs.readFileSync(f,'utf8');
+if(!s.includes('private final GradingAiJobService gradingAiJobService;')){
+  s=s.replace('    private final ClassScopeService classScopeService;\n', '    private final ClassScopeService classScopeService;\n    private final GradingAiJobService gradingAiJobService;\n');
+  s=s.replace('        GradingTaskMapper mapper,\n        ClassScopeService classScopeService\n    ) {', '        GradingTaskMapper mapper,\n        ClassScopeService classScopeService,\n        GradingAiJobService gradingAiJobService\n    ) {');
+  s=s.replace('        this.mapper = mapper;\n        this.classScopeService = classScopeService;\n', '        this.mapper = mapper;\n        this.classScopeService = classScopeService;\n        this.gradingAiJobService = gradingAiJobService;\n');
+}
+s=s.replace('            applyAutoGrade(task);\n            task = gradingTaskRepository.save(task);', '            applyAutoGrade(task, false);\n            task = gradingTaskRepository.save(task);\n            gradingAiJobService.enqueueSystemIfNeeded(task.getId());');
+s=s.replace('        applyAutoGrade(task);\n        return mapper.toResponse(gradingTaskRepository.save(task), true);', '        applyAutoGrade(task, false);\n        GradingTaskEntity savedTask = gradingTaskRepository.save(task);\n        gradingAiJobService.enqueueIfNeeded(savedTask.getId());\n        return mapper.toResponse(savedTask, true);');
+s=s.replace('            applyAutoGrade(task);\n        }\n        if (!includeFailed', '            applyAutoGrade(task, false);\n        }\n        if (!includeFailed');
+s=s.replace('            applyAutoGrade(task);\n            processed += 1;', '            applyAutoGrade(task, false);\n            gradingAiJobService.enqueueIfNeeded(task.getId());\n            processed += 1;');
+s=s.replace('                applyAutoGrade(task);\n            }\n            if (!includeFailed', '                applyAutoGrade(task, false);\n            }\n            if (!includeFailed');
+s=s.replace('            applyAutoGrade(task);\n        }\n\n        GradingItemEntity item', '            applyAutoGrade(task, false);\n        }\n\n        GradingItemEntity item');
+s=s.replace('            applyAutoGrade(task);\n        }\n\n        BigDecimal objectiveScore', '            applyAutoGrade(task, false);\n        }\n\n        BigDecimal objectiveScore');
+s=s.replace('    private void applyAutoGrade(GradingTaskEntity task) {', '    private void applyAutoGrade(GradingTaskEntity task, boolean allowProvider) {');
+s=s.replace('                SubjectiveGradingPolicy.SubjectiveGradingResult result = subjectiveGradingPolicy.grade(\n                    item.getQuestion(),\n                    answer == null ? null : answer.getAnswerJson(),\n                    item.getMaxScore(),\n                    task.getExam().getCreatedBy()\n                );', '                SubjectiveGradingPolicy.SubjectiveGradingResult result = allowProvider\n                    ? subjectiveGradingPolicy.grade(\n                        item.getQuestion(),\n                        answer == null ? null : answer.getAnswerJson(),\n                        item.getMaxScore(),\n                        task.getExam().getCreatedBy()\n                    )\n                    : subjectiveGradingPolicy.gradeBaseline(\n                        item.getQuestion(),\n                        answer == null ? null : answer.getAnswerJson(),\n                        item.getMaxScore()\n                    );');
+fs.writeFileSync(f,s,'utf8');

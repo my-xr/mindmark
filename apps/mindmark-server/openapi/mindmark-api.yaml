@@ -1,0 +1,2832 @@
+openapi: 3.0.3
+info:
+  title: MindMark API
+  version: v1
+  description: MindMark backend API contract for the exam closed loop. Round 1 contracts converge courses, teaching classes and class-scoped permissions.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+security:
+  - bearerAuth: []
+tags:
+  - name: System
+  - name: Auth
+  - name: Admin
+  - name: Academic
+  - name: Dashboard
+  - name: Question
+  - name: Paper
+  - name: Exam
+  - name: Answer
+  - name: Grading
+  - name: Score
+  - name: Review
+  - name: AI
+paths:
+  /api/v1/system/health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/v1/teacher/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get teacher first-screen dashboard aggregate
+      description: Returns metrics and top-priority tasks from database-level paged/count queries to avoid front-end fan-out and full-list aggregation.
+      responses:
+        '200':
+          description: Teacher dashboard aggregate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherDashboardResponse'
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with username and password
+      description: Validates account password, creates a Sa-Token server-side session, and returns an opaque bearer token plus mustChangePassword flag.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login token and current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current user
+      description: Invalidates the current Sa-Token session for the bearer token.
+      responses:
+        '200':
+          description: Logout result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      description: Reads the Sa-Token bearer token from Authorization header and returns current user context. Development header fallback is removed.
+
+      responses:
+        '200':
+          description: Current user context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+  /api/v1/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change current user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordResponse'
+  /api/v1/classes:
+    get:
+      tags: [Academic]
+      summary: List classes visible to current user
+      description: ADMIN can see all active classes; TEACHER/TA see assigned classes; STUDENT sees own active class.
+      responses:
+        '200':
+          description: Visible teaching classes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeachingClassListResponse'
+  /api/v1/courses:
+    get:
+      tags: [Academic]
+      summary: List courses visible to current user
+      description: ADMIN sees all active courses; TEACHER/TA/STUDENT see courses attached to visible classes.
+      responses:
+        '200':
+          description: Visible courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseListResponse'
+  /api/v1/admin/courses:
+    get:
+      tags: [Admin, Academic]
+      summary: List courses for administration
+      responses:
+        '200':
+          description: Courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseListResponse'
+    post:
+      tags: [Admin, Academic]
+      summary: Create course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseRequest'
+      responses:
+        '200':
+          description: Created course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+  /api/v1/admin/courses/{courseId}:
+    patch:
+      tags: [Admin, Academic]
+      summary: Update course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseRequest'
+      responses:
+        '200':
+          description: Updated course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+  /api/v1/admin/classes:
+    get:
+      tags: [Admin, Academic]
+      summary: List teaching classes for administration
+      responses:
+        '200':
+          description: Teaching classes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeachingClassListResponse'
+    post:
+      tags: [Admin, Academic]
+      summary: Create teaching class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeachingClassRequest'
+      responses:
+        '200':
+          description: Created teaching class
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeachingClassResponse'
+  /api/v1/admin/classes/{classId}:
+    patch:
+      tags: [Admin, Academic]
+      summary: Update teaching class
+      parameters:
+        - name: classId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeachingClassRequest'
+      responses:
+        '200':
+          description: Updated teaching class
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeachingClassResponse'
+  /api/v1/student-roster-template:
+    get:
+      tags: [Auth]
+      summary: Download student roster CSV template
+      responses:
+        '200':
+          description: CSV template
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+  /api/v1/classes/{classId}/students/import:
+    post:
+      tags: [Auth]
+      summary: Import students and create accounts
+      parameters:
+        - name: classId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRosterImportRequest'
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RosterImportResponse'
+  /api/v1/roster-import-tasks/{taskId}:
+    get:
+      tags: [Auth]
+      summary: Get roster import task result
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Import task result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RosterImportResponse'
+  /api/v1/classes/{classId}/students:
+    get:
+      tags: [Auth]
+      summary: List imported students in class
+      parameters:
+        - name: classId
+          in: path
+          required: true
+          schema: { type: string }
+        - { $ref: '#/components/parameters/PageParam' }
+        - { $ref: '#/components/parameters/PageSizeParam' }
+      responses:
+        '200':
+          description: Student accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentAccountListResponse'
+  /api/v1/students/{studentId}/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset student password to student number last 6 digits
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Reset result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPasswordResponse'
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      summary: List users for account governance
+      parameters:
+        - { name: keyword, in: query, required: false, schema: { type: string } }
+        - { name: role, in: query, required: false, schema: { type: string, enum: [ADMIN, TEACHER, TA, STUDENT] } }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ACTIVE, DISABLED] } }
+        - { $ref: '#/components/parameters/PageParam' }
+        - { $ref: '#/components/parameters/PageSizeParam' }
+      responses:
+        '200':
+          description: Paged admin user list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserPageResponse' }
+  /api/v1/admin/users/{userId}/status:
+    patch:
+      tags: [Admin]
+      summary: Enable or disable user account
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserStatusRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserResponse' }
+  /api/v1/admin/users/{userId}/roles:
+    put:
+      tags: [Admin]
+      summary: Replace user roles
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRolesRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserResponse' }
+  /api/v1/admin/users/{userId}/unlock:
+    post:
+      tags: [Admin]
+      summary: Clear temporary lock and failed login counter
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Unlocked user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserResponse' }
+  /api/v1/admin/users/{userId}/class-assignments:
+    get:
+      tags: [Admin]
+      summary: List teacher/TA class assignments
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: User class assignments
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassAssignmentListResponse' }
+    post:
+      tags: [Admin]
+      summary: Create or update teacher/TA class assignment
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClassAssignmentRequest' }
+      responses:
+        '200':
+          description: Created or updated assignment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassAssignmentResponse' }
+  /api/v1/admin/users/{userId}/class-assignments/{assignmentId}:
+    delete:
+      tags: [Admin]
+      summary: Delete teacher/TA class assignment
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+        - { name: assignmentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BooleanResponse' }
+  /api/v1/admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: Query authentication and account governance audit logs
+      parameters:
+        - { name: actorId, in: query, required: false, schema: { type: string } }
+        - { name: targetUserId, in: query, required: false, schema: { type: string } }
+        - { name: action, in: query, required: false, schema: { type: string } }
+        - { name: result, in: query, required: false, schema: { type: string } }
+        - { $ref: '#/components/parameters/PageParam' }
+        - { $ref: '#/components/parameters/PageSizeParam' }
+      responses:
+        '200':
+          description: Paged audit logs
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthAuditLogPageResponse' }
+  /api/v1/questions:
+    get:
+      tags: [Question]
+      summary: List question bank items
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/QuestionType'
+        - name: difficulty
+          in: query
+          schema:
+            $ref: '#/components/schemas/Difficulty'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, PENDING_REVIEW, ACTIVE, DISABLED]
+        - name: courseId
+          in: query
+          schema:
+            type: string
+        - name: excludePaperId
+          in: query
+          description: Exclude questions already bound to the specified paper. Used by paper assembly available-question pagination.
+          schema:
+            type: string
+        - name: knowledgePoint
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [MANUAL, AI, IMPORT]
+      responses:
+        '200':
+          description: Question page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionPageResponse'
+    post:
+      tags: [Question]
+      summary: Create a manual question and persist it to the question bank
+      description: Allowed for ADMIN, TEACHER and TA. Created questions are ACTIVE and source=MANUAL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreateRequest'
+      responses:
+        '200':
+          description: Created question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResponse'
+  /api/v1/questions/import:
+    post:
+      tags: [Question]
+      summary: Import questions into the question bank
+      description: Allowed for ADMIN, TEACHER and TA. Duplicate items in the import payload are skipped by course, type and title.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionImportRequest'
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionImportApiResponse'
+  /api/v1/questions/import/markdown:
+    post:
+      tags: [Question]
+      summary: Import Markdown question bank into the question bank
+      description: Allowed for ADMIN, TEACHER and TA. Parses exam/question-bank markdown files, writes ACTIVE source=IMPORT questions, sets every imported question knowledge point to the selected course name, and skips duplicates by course, type and title.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkdownQuestionImportRequest'
+      responses:
+        '200':
+          description: Markdown import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkdownQuestionImportApiResponse'
+  /api/v1/ai/provider-settings:
+    get:
+      tags: [AI]
+      summary: Get current teacher AI provider setting
+      description: Returns base URL, model and masked key metadata for OpenAI or Anthropic; the plaintext API key is never returned. If provider is omitted, the server default provider is used.
+      parameters:
+        - name: provider
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [OPENAI, ANTHROPIC]
+            default: OPENAI
+      responses:
+        '200':
+          description: AI provider setting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProviderSettingApiResponse'
+    put:
+      tags: [AI]
+      summary: Save current teacher AI provider connection setting
+      description: Allowed for ADMIN, TEACHER and TA. Saves baseUrl, model and optional API key. API keys are encrypted at rest and are only used by backend provider adapters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderSettingRequest'
+      responses:
+        '200':
+          description: Saved AI provider setting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProviderSettingApiResponse'
+  /api/v1/ai/provider-settings/test:
+    post:
+      tags: [AI]
+      summary: Test current teacher AI provider connection
+      description: Uses the submitted baseUrl/model/apiKey, or the teacher saved key/global fallback when apiKey is omitted. The test does not persist settings and never returns plaintext API keys.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderConnectionTestRequest'
+      responses:
+        '200':
+          description: AI provider connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProviderConnectionTestApiResponse'
+  /api/v1/ai/questions/generate:
+    post:
+      tags: [AI]
+      summary: Generate Chinese questions with LangGraph and OpenAI / Anthropic, then persist drafts
+      description: Resolves the teacher-specific OpenAI or Anthropic key first, falls back to the matching global environment config, runs validate_input -> resolve_course -> generate_with_ai -> persist_questions, verifies Chinese title/options/analysis/scoring points, and writes generated questions as source=AI, status=PENDING_REVIEW.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiQuestionGenerateRequest'
+      responses:
+        '200':
+          description: Generated and persisted AI question drafts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionListResponse'
+  /api/v1/papers:
+    get:
+      tags: [Paper]
+      summary: List papers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paper page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperPageResponse'
+  /api/v1/papers/{paperId}:
+    get:
+      tags: [Paper]
+      summary: Get paper detail
+      description: Available to ADMIN, TEACHER and TA only. Students must use `/api/v1/student/exams/{examId}/paper`, which returns the answer-sheet-specific randomized option order.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      responses:
+        '200':
+          description: Paper detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperResponse'
+    delete:
+      tags: [Paper]
+      summary: Delete editable paper
+      description: Only ADMIN/TEACHER/TA can delete DRAFT or READY papers that have not created exams. Paper-question relations are removed, original question bank items are preserved.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResponse'
+        '409':
+          description: Paper is published, archived, or already used by exams
+  /api/v1/papers/{paperId}/status:
+    patch:
+      tags: [Paper]
+      summary: Update paper status
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePaperStatusRequest'
+      responses:
+        '200':
+          description: Updated paper
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperResponse'
+  /api/v1/papers/{paperId}/questions:
+    get:
+      tags: [Paper]
+      summary: List selected questions in a paper with database pagination
+      description: Available to ADMIN, TEACHER and TA only. Students must use the assigned-exam paper endpoint.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paper question page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperQuestionPageResponse'
+    post:
+      tags: [Paper]
+      summary: Add a question to a paper
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPaperQuestionRequest'
+      responses:
+        '200':
+          description: Updated paper
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperResponse'
+  /api/v1/papers/{paperId}/answer-key:
+    get:
+      tags: [Paper]
+      summary: Get canonical paper answer key
+      description: Available to ADMIN, TEACHER and TA only. Returns canonical question options, answers, analysis and scoring points. This endpoint must never be exposed to students.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      responses:
+        '200':
+          description: Complete paper answer key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperAnswerKeyResponse'
+  /api/v1/papers/{paperId}/compose/random/preview:
+    post:
+      tags: [Paper]
+      summary: Preview random paper composition quality without writing
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaperComposeRequest'
+      responses:
+        '200':
+          description: Compose preview result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperComposePreviewResponse'
+  /api/v1/papers/{paperId}/compose/agent/preview:
+    post:
+      tags: [Paper]
+      summary: Preview LangGraph assisted paper composition plan and quality without writing
+      description: Runs the composition planning workflow and backend inventory checks, returns quality distribution and agent plan but does not write paper questions.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaperComposeRequest'
+      responses:
+        '200':
+          description: Compose preview result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperComposePreviewResponse'
+  /api/v1/papers/{paperId}/compose/random:
+    post:
+      tags: [Paper]
+      summary: Randomly compose a paper from active course question bank
+      description: Uses teacher-defined rules to pick ACTIVE questions from the same course. Supports APPEND or REPLACE and validates target score, inventory, question type, difficulty and knowledge point constraints before writing paper questions.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaperComposeRequest'
+      responses:
+        '200':
+          description: Compose result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperComposeResultResponse'
+  /api/v1/papers/{paperId}/compose/agent:
+    post:
+      tags: [Paper]
+      summary: Intelligently compose a paper from active course question bank
+      description: Uses the paper compose agent to balance question selection across difficulty and knowledge point buckets. The agent never writes unchecked data directly; backend validation enforces course scope, ACTIVE status, de-duplication, target score and inventory constraints.
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaperComposeRequest'
+      responses:
+        '200':
+          description: Compose result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperComposeResultResponse'
+  /api/v1/papers/{paperId}/questions/{questionId}:
+    delete:
+      tags: [Paper]
+      summary: Remove a question from a paper
+      parameters:
+        - $ref: '#/components/parameters/PaperId'
+        - $ref: '#/components/parameters/QuestionId'
+      responses:
+        '200':
+          description: Updated paper
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperResponse'
+  /api/v1/exams:
+    get:
+      tags: [Exam]
+      summary: List exams for teacher workspace with database pagination and class-scope filtering
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Exam list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamListResponse'
+    post:
+      tags: [Exam]
+      summary: Create an exam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExamRequest'
+      responses:
+        '200':
+          description: Created exam
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamResponse'
+  /api/v1/exams/{examId}:
+    get:
+      tags: [Exam]
+      summary: Get exam detail
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Exam detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamResponse'
+  /api/v1/student/exams:
+    get:
+      tags: [Exam]
+      summary: List current student's exams
+      description: Student identity is resolved from the current Sa-Token session; studentId query is not accepted.
+      responses:
+        '200':
+          description: Student exams
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentExamListResponse'
+  /api/v1/student/exams/{examId}/paper:
+    get:
+      tags: [Exam]
+      summary: Get current student's randomized exam paper
+      description: Student-only payload, available only while the assigned exam is ongoing. SINGLE_CHOICE and MULTIPLE_CHOICE option content is randomized per answer sheet and remains stable after refresh. Correct answers, analysis and scoring points are not returned.
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Student-safe randomized paper payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperResponse'
+  /api/v1/answer-sheets/{answerSheetId}:
+    get:
+      tags: [Answer]
+      summary: Get answer sheet detail
+      parameters:
+        - $ref: '#/components/parameters/AnswerSheetId'
+      responses:
+        '200':
+          description: Answer sheet detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerSheetResponse'
+  /api/v1/answer-sheets/by-exam/{examId}:
+    get:
+      tags: [Answer]
+      summary: Get current student's answer sheet by exam
+      description: Student identity is resolved from the current Sa-Token session; studentId query is not accepted.
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Answer sheet detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerSheetResponse'
+  /api/v1/answer-sheets/{answerSheetId}/draft:
+    put:
+      tags: [Answer]
+      summary: Save answer draft idempotently
+      parameters:
+        - $ref: '#/components/parameters/AnswerSheetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveAnswerDraftRequest'
+      responses:
+        '200':
+          description: Updated answer sheet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerSheetResponse'
+  /api/v1/answer-sheets/{answerSheetId}/submit:
+    post:
+      tags: [Answer]
+      summary: Submit answer sheet
+      parameters:
+        - $ref: '#/components/parameters/AnswerSheetId'
+      responses:
+        '200':
+          description: Submitted answer sheet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerSheetResponse'
+  /api/v1/grading-tasks:
+    get:
+      tags: [Grading]
+      summary: List grading tasks by page
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: examId
+          in: query
+          schema:
+            type: string
+        - name: courseName
+          in: query
+          description: Filter grading tasks by paper course name
+          schema:
+            type: string
+        - name: scoreBand
+          in: query
+          description: Filter grading tasks by final score percent band.
+          schema:
+            $ref: '#/components/schemas/ScoreBandKey'
+      responses:
+        '200':
+          description: Grading task page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingTaskPageResponse'
+  /api/v1/grading-tasks/{gradingTaskId}:
+    get:
+      tags: [Grading]
+      summary: Get grading task detail
+      parameters:
+        - $ref: '#/components/parameters/GradingTaskId'
+      responses:
+        '200':
+          description: Grading task detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingTaskResponse'
+  /api/v1/grading-tasks/{gradingTaskId}/auto-grade:
+    post:
+      tags: [Grading]
+      summary: Auto-grade all questions in a grading task
+      parameters:
+        - $ref: '#/components/parameters/GradingTaskId'
+      responses:
+        '200':
+          description: Auto-graded task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingTaskResponse'
+  /api/v1/grading-tasks/{gradingTaskId}/confirm-system-score:
+    post:
+      tags: [Grading]
+      summary: Confirm system default score for one grading task
+      parameters:
+        - $ref: '#/components/parameters/GradingTaskId'
+        - name: includeFailed
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: Must be true when confirming failed score after focused review.
+      responses:
+        '200':
+          description: Confirmed grading task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingTaskResponse'
+  /api/v1/grading-tasks/batch-auto-grade:
+    post:
+      tags: [Grading]
+      summary: Batch auto-grade tasks in current teacher-visible scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchConfirmGradingTasksRequest'
+      responses:
+        '200':
+          description: Batch auto-grade operation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchGradingTaskOperationResponse'
+  /api/v1/grading-tasks/batch-confirm:
+    post:
+      tags: [Grading]
+      summary: Batch confirm system default scores in current teacher-visible scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchConfirmGradingTasksRequest'
+      responses:
+        '200':
+          description: Batch confirm operation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchGradingTaskOperationResponse'
+  /api/v1/grading-tasks/{gradingTaskId}/review:
+    post:
+      tags: [Grading]
+      summary: Review a grading task
+      parameters:
+        - $ref: '#/components/parameters/GradingTaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewGradingTaskRequest'
+      responses:
+        '200':
+          description: Reviewed grading task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingTaskResponse'
+  /api/v1/grading-tasks/{gradingTaskId}/items:
+    get:
+      tags: [Grading]
+      summary: List grading task items by page
+      parameters:
+        - $ref: '#/components/parameters/GradingTaskId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Grading item page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingItemPageResponse'
+  /api/v1/grading-tasks/{gradingTaskId}/items/{questionId}/review:
+    post:
+      tags: [Grading]
+      summary: Review one grading item by question id
+      parameters:
+        - $ref: '#/components/parameters/GradingTaskId'
+        - $ref: '#/components/parameters/QuestionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewGradingItemRequest'
+      responses:
+        '200':
+          description: Reviewed grading task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingTaskResponse'
+  /api/v1/score-summaries:
+    get:
+      tags: [Score]
+      summary: List exam score summaries by page
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Exam score summary page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamScoreSummaryPageResponse'
+  /api/v1/exams/{examId}/score-reports:
+    get:
+      tags: [Score]
+      summary: List student score report rows by page for an exam
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Score summary item page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreSummaryItemPageResponse'
+  /api/v1/exams/{examId}/security-events:
+    get:
+      tags: [Audit]
+      summary: List exam security events with database pagination
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Security event page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamSecurityEventPageResponse'
+    post:
+      tags: [Audit]
+      summary: Report a student-side security event
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExamSecurityEventReportRequest'
+      responses:
+        '200':
+          description: Created security event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamSecurityEventResponse'
+  /api/v1/exams/{examId}/scores:
+    get:
+      tags: [Score]
+      summary: Get exam score summary
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Exam score summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamScoreSummaryResponse'
+  /api/v1/exams/{examId}/publish-scores:
+    post:
+      tags: [Grading]
+      summary: Publish exam scores
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Publish result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishScoreResponse'
+  /api/v1/student/score-reports:
+    get:
+      tags: [Score]
+      summary: List current student's score reports
+      responses:
+        '200':
+          description: Score reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreReportListResponse'
+  /api/v1/review-reports:
+    get:
+      tags: [Review]
+      summary: List exam review reports
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: examId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review report page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewReportPageResponse'
+  /api/v1/review-reports/{examId}/lecture-draft/regenerate:
+    post:
+      tags: [Review]
+      summary: Regenerate AI lecture draft
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Updated review report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewReportResponse'
+  /api/v1/review-reports/{examId}/lecture-draft/approve:
+    post:
+      tags: [Review]
+      summary: Approve AI lecture draft
+      parameters:
+        - $ref: '#/components/parameters/ExamId'
+      responses:
+        '200':
+          description: Updated review report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewReportResponse'
+  /api/v1/exams/reviews:
+    get:
+      tags: [Review]
+      summary: List exam review reports available to current teacher scope with database pagination
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Review report page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamReviewReportPageResponse' }
+  /api/v1/exams/{examId}/review:
+    get:
+      tags: [Review]
+      summary: Get real exam review analysis with AI lecture draft
+      parameters:
+        - { name: examId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Review report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamReviewReportResponse' }
+  /api/v1/exams/{examId}/lecture-draft/regenerate:
+    post:
+      tags: [Review]
+      summary: Regenerate AI lecture draft from latest review analysis
+      parameters:
+        - { name: examId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: AI lecture draft
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiLectureDraftResponse' }
+  /api/v1/exams/{examId}/lecture-draft/approve:
+    post:
+      tags: [Review]
+      summary: Approve teacher-reviewed AI lecture draft
+      parameters:
+        - { name: examId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveLectureDraftRequest' }
+      responses:
+        '200':
+          description: Approved lecture draft
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiLectureDraftResponse' }
+  /api/v1/exams/{examId}/review-artifacts:
+    post:
+      tags: [Review]
+      summary: Generate and upload review artifact to MinIO
+      parameters:
+        - { name: examId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReviewArtifactRequest' }
+      responses:
+        '200':
+          description: Exported artifact metadata and download URL
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewArtifactResponse' }
+  /api/v1/review-artifacts/{artifactId}/download:
+    get:
+      tags: [Review]
+      summary: Get presigned download URL for a review artifact
+      parameters:
+        - { name: artifactId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Artifact metadata with a short-lived download URL
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewArtifactResponse' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sa-Token opaque UUID
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    QuestionId:
+      name: questionId
+      in: path
+      required: true
+      schema: { type: string }
+    PaperId:
+      name: paperId
+      in: path
+      required: true
+      schema: { type: string }
+    ExamId:
+      name: examId
+      in: path
+      required: true
+      schema: { type: string }
+    AnswerSheetId:
+      name: answerSheetId
+      in: path
+      required: true
+      schema: { type: string }
+    GradingTaskId:
+      name: gradingTaskId
+      in: path
+      required: true
+      schema: { type: string }
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message, timestamp]
+      properties:
+        code: { type: string, example: '0' }
+        message: { type: string, example: Success }
+        data: { nullable: true }
+        traceId: { type: string, nullable: true }
+        timestamp: { type: string, format: date-time }
+    TeacherDashboardMetric:
+      type: object
+      properties:
+        label: { type: string }
+        value: { type: string }
+        hint: { type: string }
+    TeacherDashboardTask:
+      type: object
+      properties:
+        name: { type: string }
+        meta: { type: string }
+        status: { type: string }
+        tone: { type: string, enum: [default, info, processing, success, warning, danger] }
+        to: { type: string }
+    TeacherDashboard:
+      type: object
+      properties:
+        metrics:
+          type: array
+          items: { $ref: '#/components/schemas/TeacherDashboardMetric' }
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/TeacherDashboardTask' }
+    TeacherDashboardResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/TeacherDashboard' }
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        username: { type: string }
+        roles:
+          type: array
+          items: { type: string, enum: [ADMIN, TEACHER, TA, STUDENT] }
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+        mustChangePassword: { type: boolean }
+        failedLoginCount: { type: integer }
+        lockedUntil: { type: string, format: date-time, nullable: true }
+        accountSource: { type: string }
+        studentId: { type: string, nullable: true }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/AdminUser' }
+    AdminUserPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/AdminUser' }
+    UpdateUserStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+    UpdateUserRolesRequest:
+      type: object
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items: { type: string, enum: [ADMIN, TEACHER, TA, STUDENT] }
+    ClassAssignment:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        classId: { type: string }
+        assignmentRole: { type: string, enum: [OWNER, ASSISTANT] }
+        createdAt: { type: string, format: date-time }
+    ClassAssignmentRequest:
+      type: object
+      required: [classId, assignmentRole]
+      properties:
+        classId: { type: string }
+        assignmentRole: { type: string, enum: [OWNER, ASSISTANT] }
+    ClassAssignmentResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ClassAssignment' }
+    ClassAssignmentListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/ClassAssignment' }
+    AuthAuditLog:
+      type: object
+      properties:
+        id: { type: string }
+        actorId: { type: string }
+        action: { type: string }
+        targetUserId: { type: string, nullable: true }
+        result: { type: string }
+        detail: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    AuthAuditLogPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/AuthAuditLog' }
+    BooleanResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { type: boolean }
+    LoginRequest:
+      type: object
+      properties:
+        userId: { type: string, nullable: true, example: u-teacher-001 }
+        username: { type: string, nullable: true, example: teacher@mindmark.local }
+        password: { type: string, nullable: true, example: dev-password }
+    LoginData:
+      type: object
+      required: [token, user, mustChangePassword]
+      properties:
+        token: { type: string, example: 2f5e8d5d-7d3b-4f18-b1c8-85d8d6a3f111 }
+        user: { $ref: '#/components/schemas/CurrentUser' }
+        mustChangePassword: { type: boolean, example: false }
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/LoginData' }
+    LogoutData:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, example: true }
+    LogoutResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/LogoutData' }
+    CurrentUser:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        username: { type: string }
+        mustChangePassword: { type: boolean }
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [ADMIN, TEACHER, TA, STUDENT]
+        status:
+          type: string
+          enum: [ACTIVE, DISABLED]
+        studentId: { type: string, nullable: true }
+    CurrentUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/CurrentUser' }
+    ChangePasswordRequest:
+      type: object
+      required: [oldPassword, newPassword]
+      properties:
+        oldPassword: { type: string, format: password }
+        newPassword: { type: string, format: password, minLength: 8, description: Must differ from old password and contain both letters and digits. }
+    ChangePasswordData:
+      type: object
+      required: [success, mustChangePassword]
+      properties:
+        success: { type: boolean }
+        mustChangePassword: { type: boolean }
+    ChangePasswordResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ChangePasswordData' }
+    AcademicStatus:
+      type: string
+      enum: [ACTIVE, DISABLED, ARCHIVED]
+    CourseRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/AcademicStatus' }
+    Course:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/AcademicStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CourseResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Course' }
+    CourseListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/Course' }
+    TeachingClassRequest:
+      type: object
+      required: [code, name]
+      properties:
+        courseId: { type: string }
+        code: { type: string }
+        name: { type: string }
+        grade: { type: string, nullable: true }
+        major: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/AcademicStatus' }
+    TeachingClass:
+      type: object
+      properties:
+        id: { type: string }
+        courseId: { type: string }
+        courseName: { type: string }
+        code: { type: string }
+        name: { type: string }
+        grade: { type: string, nullable: true }
+        major: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/AcademicStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TeachingClassResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/TeachingClass' }
+    TeachingClassListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/TeachingClass' }
+    StudentImportRow:
+      type: object
+      required: [studentNo, name]
+      properties:
+        studentNo: { type: string, example: '202601345678' }
+        name: { type: string, example: 瀵姳绗?}
+        email: { type: string, nullable: true }
+        className: { type: string, nullable: true }
+        grade: { type: string, nullable: true }
+        major: { type: string, nullable: true }
+    StudentRosterImportRequest:
+      type: object
+      required: [students]
+      properties:
+        classId: { type: string, nullable: true, description: Ignored when classId is supplied by path. }
+        className: { type: string, nullable: true, description: Kept for backward compatibility; server uses trusted teaching_class.name. }
+        students:
+          type: array
+          items: { $ref: '#/components/schemas/StudentImportRow' }
+    RosterImportError:
+      type: object
+      properties:
+        rowNumber: { type: integer }
+        studentNo: { type: string, nullable: true }
+        message: { type: string }
+    StudentAccount:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        username: { type: string }
+        name: { type: string }
+        email: { type: string }
+        studentNo: { type: string }
+        classId: { type: string }
+        className: { type: string }
+        grade: { type: string, nullable: true }
+        major: { type: string, nullable: true }
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+        mustChangePassword: { type: boolean }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    RosterImportData:
+      type: object
+      properties:
+        taskId: { type: string }
+        status: { type: string, enum: [SUCCEEDED, PARTIAL_FAILED, FAILED] }
+        totalCount: { type: integer }
+        createdCount: { type: integer }
+        skippedCount: { type: integer }
+        failedCount: { type: integer }
+        errors:
+          type: array
+          items: { $ref: '#/components/schemas/RosterImportError' }
+        students:
+          type: array
+          items: { $ref: '#/components/schemas/StudentAccount' }
+    RosterImportResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/RosterImportData' }
+    StudentAccountListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/StudentAccount' }
+    ResetPasswordData:
+      type: object
+      properties:
+        studentId: { type: string }
+        username: { type: string }
+        mustChangePassword: { type: boolean }
+    ResetPasswordResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ResetPasswordData' }
+    PageResponse:
+      type: object
+      required: [items, total, page, pageSize, totalPages, hasPrevious, hasNext]
+      properties:
+        items:
+          type: array
+          items: { type: object }
+        total: { type: integer, format: int64 }
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalPages: { type: integer }
+        hasPrevious: { type: boolean }
+        hasNext: { type: boolean }
+    QuestionType:
+      type: string
+      enum: [SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK, SHORT_ANSWER, PROGRAMMING]
+    Difficulty:
+      type: string
+      enum: [VERY_EASY, EASY, MEDIUM, HARD, VERY_HARD]
+    HealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status: { type: string, example: UP }
+                service: { type: string, example: mindmark-server }
+                checkedAt: { type: string, format: date-time }
+    Question:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        type: { $ref: '#/components/schemas/QuestionType' }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        courseId: { type: string }
+        courseName: { type: string }
+        score: { type: number }
+        knowledgePoints:
+          type: array
+          items: { type: string }
+        status: { type: string, enum: [DRAFT, PENDING_REVIEW, ACTIVE, DISABLED] }
+        source: { type: string, enum: [MANUAL, AI, IMPORT] }
+        answer: { oneOf: [{ type: string }, { type: array, items: { type: string } }] }
+        analysis: { type: string }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              content: { type: string }
+        scoringPoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              description: { type: string }
+              score: { type: number }
+              keywords:
+                type: array
+                items: { type: string }
+              required: { type: boolean }
+        createdBy: { type: string }
+        updatedAt: { type: string, description: Display time formatted as yyyy-MM-dd HH:mm }
+    QuestionPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/Question' }
+    QuestionResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Question'
+    QuestionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/Question' }
+    QuestionOptionInput:
+      type: object
+      properties:
+        key: { type: string, example: A }
+        content: { type: string }
+    ScoringPointInput:
+      type: object
+      properties:
+        id: { type: string }
+        description: { type: string }
+        score: { type: number }
+        keywords:
+          type: array
+          items: { type: string }
+        required: { type: boolean }
+    QuestionCreateRequest:
+      type: object
+      required: [courseId, title, type, difficulty, score, answer, analysis]
+      properties:
+        courseId: { type: string, description: Existing course id }
+        title: { type: string }
+        type: { $ref: '#/components/schemas/QuestionType' }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        knowledgePoints:
+          type: array
+          items: { type: string }
+        score: { type: number, minimum: 0 }
+        answer:
+          description: Correct answer, string for subjective/simple answers or array/object for structured answers.
+          nullable: true
+        analysis: { type: string }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/QuestionOptionInput' }
+        scoringPoints:
+          type: array
+          items: { $ref: '#/components/schemas/ScoringPointInput' }
+    QuestionImportRequest:
+      type: object
+      required: [questions]
+      properties:
+        questions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/QuestionCreateRequest' }
+    QuestionImportResponse:
+      type: object
+      properties:
+        importedCount: { type: integer }
+        skippedCount: { type: integer }
+        importedQuestions:
+          type: array
+          items: { $ref: '#/components/schemas/Question' }
+    QuestionImportApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/QuestionImportResponse'
+    MarkdownQuestionImportRequest:
+      type: object
+      required: [courseId, markdown]
+      properties:
+        courseId:
+          type: string
+          description: Target course id. Imported knowledgePoints are set to the resolved course name.
+        markdown:
+          type: string
+          description: UTF-8 Markdown content. Supports exam/question-bank format with **question-no** metadata, options, answer, analysis and scoring standard quote blocks.
+        fileName:
+          type: string
+          description: Original file name for audit only.
+    MarkdownQuestionImportResponse:
+      type: object
+      properties:
+        parsedCount: { type: integer }
+        importedCount: { type: integer }
+        skippedCount: { type: integer }
+        warnings:
+          type: array
+          items: { type: string }
+        importedQuestions:
+          type: array
+          items: { $ref: '#/components/schemas/Question' }
+    MarkdownQuestionImportApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/MarkdownQuestionImportResponse'
+    AiProviderSettingRequest:
+      type: object
+      required: [provider, baseUrl, model]
+      properties:
+        provider:
+          type: string
+          enum: [OPENAI, ANTHROPIC]
+          description: AI provider selected by the teacher.
+        baseUrl:
+          type: string
+          example: https://api.openai.com/v1
+          description: Provider server base URL. OpenAI-compatible providers use /chat/completions under this base URL.
+        model:
+          type: string
+          example: gpt-4.1-mini
+          description: Model name used for AI question generation.
+        apiKey:
+          type: string
+          writeOnly: true
+          description: Plaintext OpenAI or Anthropic API key submitted once and encrypted at rest. Required on first personal save; optional when updating endpoint/model.
+    AiProviderConnectionTestRequest:
+      type: object
+      required: [provider, baseUrl, model]
+      properties:
+        provider: { type: string, enum: [OPENAI, ANTHROPIC], example: OPENAI }
+        baseUrl:
+          type: string
+          example: https://api.openai.com/v1
+          description: Base URL used only for this connection test.
+        model:
+          type: string
+          example: gpt-4.1-mini
+          description: Model name used only for this connection test.
+        apiKey:
+          type: string
+          writeOnly: true
+          description: Optional plaintext API key used only for this test. If omitted, the backend tries the saved teacher key and then allowed global fallback.
+    AiProviderConnectionTestResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        provider: { type: string, enum: [OPENAI, ANTHROPIC], example: OPENAI }
+        providerLabel: { type: string, example: OpenAI }
+        baseUrl: { type: string, nullable: true, example: https://api.openai.com/v1 }
+        model: { type: string, nullable: true, example: gpt-4.1-mini }
+        latencyMs: { type: integer, format: int64, nullable: true }
+        message: { type: string, example: 连接测试成功 }
+        responsePreview: { type: string, nullable: true, example: 连接成功 }
+        testedAt: { type: string, format: date-time }
+    AiProviderConnectionTestApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AiProviderConnectionTestResponse'
+    AiProviderSettingResponse:
+      type: object
+      properties:
+        provider: { type: string, enum: [OPENAI, ANTHROPIC], example: OPENAI }
+        providerLabel: { type: string, example: OpenAI }
+        configured: { type: boolean }
+        keyPreview: { type: string, nullable: true, example: '****abcdef' }
+        baseUrl: { type: string, example: https://api.openai.com/v1 }
+        model: { type: string, example: gpt-4.1-mini }
+        updatedAt: { type: string, format: date-time, nullable: true }
+    AiProviderSettingApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AiProviderSettingResponse'
+    AiQuestionGenerateRequest:
+      type: object
+      required: [courseId, prompt, questionType, difficulty, count]
+      properties:
+        courseId: { type: string, description: Selected course id }
+        provider: { type: string, enum: [OPENAI, ANTHROPIC], default: OPENAI }
+        prompt: { type: string, description: Chinese generation prompt or selected course name }
+        questionType: { $ref: '#/components/schemas/QuestionType' }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        count: { type: integer, minimum: 1, maximum: 5 }
+        knowledgePoint: { type: string, nullable: true }
+        requirement: { type: string, nullable: true }
+    AiQuestionGenerationRequest:
+      deprecated: true
+      allOf:
+        - $ref: '#/components/schemas/AiQuestionGenerateRequest'
+    PaperQuestion:
+      type: object
+      properties:
+        id: { type: string }
+        questionId: { type: string }
+        order: { type: integer }
+        score: { type: number }
+        question: { $ref: '#/components/schemas/Question' }
+    Paper:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        courseId: { type: string }
+        courseName: { type: string }
+        description: { type: string }
+        durationMinutes: { type: integer }
+        totalScore: { type: number }
+        status: { type: string, enum: [DRAFT, READY, PUBLISHED, ARCHIVED] }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/PaperQuestion' }
+        createdBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+    PaperAnswerKeyItem:
+      type: object
+      properties:
+        id: { type: string }
+        questionId: { type: string }
+        order: { type: integer }
+        score: { type: number }
+        question: { $ref: '#/components/schemas/Question' }
+    PaperAnswerKey:
+      type: object
+      properties:
+        paperId: { type: string }
+        title: { type: string }
+        courseId: { type: string }
+        courseName: { type: string }
+        totalScore: { type: number }
+        generatedAt: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PaperAnswerKeyItem' }
+    PaperPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/Paper' }
+    PaperQuestionPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/PaperQuestion' }
+    PaperResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Paper' }
+    PaperAnswerKeyResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/PaperAnswerKey' }
+    UpdatePaperStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [DRAFT, READY, PUBLISHED, ARCHIVED] }
+    AddPaperQuestionRequest:
+      type: object
+      required: [questionId, score]
+      properties:
+        questionId: { type: string }
+        score: { type: number, minimum: 0 }
+    PaperComposeMode:
+      type: string
+      enum: [APPEND, REPLACE]
+      description: APPEND keeps existing paper questions and adds selected questions; REPLACE clears existing paper questions before writing selected questions.
+    PaperComposeStrategy:
+      type: string
+      enum: [RANDOM, AGENT]
+    PaperComposeRuleRequest:
+      type: object
+      required: [type, count, score]
+      properties:
+        type:
+          $ref: '#/components/schemas/QuestionType'
+        count:
+          type: integer
+          minimum: 0
+          description: Number of questions to pick for this type.
+        score:
+          type: number
+          minimum: 0.1
+          description: Score per question.
+        difficulties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Difficulty'
+          description: Optional allowed difficulty list. Empty means all difficulties.
+        knowledgePoints:
+          type: array
+          items: { type: string }
+          description: Optional allowed knowledge point list. Empty means no knowledge point constraint.
+    PaperComposeRequest:
+      type: object
+      properties:
+        targetScore:
+          type: number
+          minimum: 0.1
+          default: 100
+        mode:
+          $ref: '#/components/schemas/PaperComposeMode'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaperComposeRuleRequest'
+      description: When rules are omitted, the server applies the default 100-point template: 20 single choice, 10 multiple choice, 10 true/false, 10 fill blank, 4 short answer and 2 programming questions.
+    PaperComposeGap:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/QuestionType'
+        requiredCount: { type: integer }
+        availableCount: { type: integer }
+        knowledgePoints:
+          type: array
+          items: { type: string }
+        message: { type: string }
+    PaperComposeDistributionItem:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        count: { type: integer }
+        score: { type: number }
+        percentage: { type: number }
+    PaperComposeQualityReport:
+      type: object
+      properties:
+        targetScore: { type: number }
+        actualScore: { type: number }
+        totalQuestionCount: { type: integer }
+        knowledgePointCount: { type: integer }
+        typeDistribution:
+          type: array
+          items: { $ref: '#/components/schemas/PaperComposeDistributionItem' }
+        difficultyDistribution:
+          type: array
+          items: { $ref: '#/components/schemas/PaperComposeDistributionItem' }
+        knowledgePointDistribution:
+          type: array
+          items: { $ref: '#/components/schemas/PaperComposeDistributionItem' }
+        highlights:
+          type: array
+          items: { type: string }
+        risks:
+          type: array
+          items: { type: string }
+    PaperComposeAgentPlan:
+      type: object
+      properties:
+        workflow: { type: string }
+        summary: { type: string }
+        steps:
+          type: array
+          items: { type: string }
+        rationale:
+          type: array
+          items: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }
+    PaperComposePreview:
+      type: object
+      properties:
+        paperId: { type: string }
+        mode:
+          $ref: '#/components/schemas/PaperComposeMode'
+        strategy:
+          $ref: '#/components/schemas/PaperComposeStrategy'
+        targetScore: { type: number }
+        currentScore: { type: number }
+        plannedAddedScore: { type: number }
+        plannedFinalScore: { type: number }
+        plannedAddedCount: { type: integer }
+        ready: { type: boolean }
+        gaps:
+          type: array
+          items: { $ref: '#/components/schemas/PaperComposeGap' }
+        warnings:
+          type: array
+          items: { type: string }
+        qualityReport:
+          $ref: '#/components/schemas/PaperComposeQualityReport'
+        agentPlan:
+          $ref: '#/components/schemas/PaperComposeAgentPlan'
+    PaperComposePreviewResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PaperComposePreview'
+    PaperComposeResult:
+      type: object
+      properties:
+        paper:
+          $ref: '#/components/schemas/Paper'
+        addedCount: { type: integer }
+        addedScore: { type: number }
+        targetScore: { type: number }
+        actualScore: { type: number }
+        mode:
+          $ref: '#/components/schemas/PaperComposeMode'
+        strategy:
+          $ref: '#/components/schemas/PaperComposeStrategy'
+        gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaperComposeGap'
+        warnings:
+          type: array
+          items: { type: string }
+        qualityReport:
+          $ref: '#/components/schemas/PaperComposeQualityReport'
+        agentPlan:
+          $ref: '#/components/schemas/PaperComposeAgentPlan'
+    PaperComposeResultResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PaperComposeResult'
+    Exam:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        paperId: { type: string }
+        paperTitle: { type: string }
+        classIds:
+          type: array
+          items: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        durationMinutes: { type: integer }
+        totalScore: { type: number }
+        status: { type: string, enum: [DRAFT, SCHEDULED, ONGOING, ENDED, GRADING, SCORES_PUBLISHED] }
+        createdBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+    CreateExamRequest:
+      type: object
+      required: [title, paperId, classIds, startAt, endAt]
+      properties:
+        title: { type: string }
+        paperId: { type: string }
+        classIds:
+          type: array
+          items: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        durationMinutes: { type: integer, minimum: 1, nullable: true }
+    ExamResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Exam' }
+    ExamListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/Exam' }
+    StudentExam:
+      allOf:
+        - $ref: '#/components/schemas/Exam'
+        - type: object
+          properties:
+            answerSheetId: { type: string }
+            answerVersion: { type: integer }
+            answerStatus: { type: string, enum: [NOT_STARTED, IN_PROGRESS, SUBMITTED, GRADED, ABSENT] }
+    ExamSecurityEventType:
+      type: string
+      enum: [VISIBILITY_HIDDEN, WINDOW_BLUR, FULLSCREEN_EXIT, AUTO_SUBMIT, MANUAL_REPORT]
+    ExamSecuritySeverity:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+    ExamSecurityEvent:
+      type: object
+      properties:
+        id: { type: string }
+        examId: { type: string }
+        answerSheetId: { type: string }
+        studentId: { type: string }
+        studentName: { type: string }
+        eventType: { $ref: '#/components/schemas/ExamSecurityEventType' }
+        severity: { $ref: '#/components/schemas/ExamSecuritySeverity' }
+        message: { type: string, nullable: true }
+        clientEventCount: { type: integer }
+        clientOccurredAt: { type: string, format: date-time, nullable: true }
+        serverReceivedAt: { type: string, format: date-time }
+        userAgent: { type: string, nullable: true }
+    ExamSecurityEventReportRequest:
+      type: object
+      required: [eventType]
+      properties:
+        eventType: { $ref: '#/components/schemas/ExamSecurityEventType' }
+        message: { type: string, nullable: true }
+        clientEventCount: { type: integer, minimum: 1, nullable: true }
+        clientOccurredAt: { type: string, format: date-time, nullable: true }
+    ExamSecurityEventResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ExamSecurityEvent' }
+    ExamSecurityEventPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/ExamSecurityEvent' }
+    StudentExamListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/StudentExam' }
+    AnswerItem:
+      type: object
+      required: [questionId, answer]
+      properties:
+        questionId: { type: string }
+        answer: {}
+    SaveAnswerDraftRequest:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items: { $ref: '#/components/schemas/AnswerItem' }
+        clientSavedAt: { type: string, format: date-time }
+        expectedVersion: { type: integer, nullable: true, description: Client-side optimistic version. If provided, must match current answer sheet version. }
+    AnswerSheet:
+      type: object
+      properties:
+        id: { type: string }
+        examId: { type: string }
+        studentId: { type: string }
+        studentName: { type: string }
+        status: { type: string, enum: [DRAFT, SUBMITTED, GRADING, GRADED, ABSENT] }
+        version: { type: integer }
+        answers:
+          type: array
+          items: { $ref: '#/components/schemas/AnswerItem' }
+        startedAt: { type: string, format: date-time }
+        clientSavedAt: { type: string, format: date-time, nullable: true }
+        submittedAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time }
+    AnswerSheetResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/AnswerSheet' }
+    GradingItem:
+      type: object
+      properties:
+        id: { type: string }
+        questionId: { type: string }
+        questionTitle: { type: string }
+        questionType: { type: string, enum: [SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK, SHORT_ANSWER, PROGRAMMING] }
+        maxScore: { type: number }
+        autoScore: { type: number, nullable: true }
+        finalScore: { type: number, nullable: true }
+        objective: { type: boolean }
+        correct: { type: boolean, nullable: true }
+        aiConfidence: { type: number, nullable: true }
+        needsReview: { type: boolean, nullable: true }
+        comment: { type: string, nullable: true }
+        studentAnswer: { nullable: true }
+    GradingTask:
+      type: object
+      properties:
+        id: { type: string }
+        examId: { type: string }
+        examTitle: { type: string }
+        answerSheetId: { type: string }
+        studentId: { type: string }
+        studentName: { type: string }
+        status: { type: string, enum: [PENDING, AI_CHECKED, REVIEWED] }
+        objectiveScore: { type: number, nullable: true }
+        subjectiveScore: { type: number, nullable: true }
+        aiScore: { type: number, nullable: true }
+        finalScore: { type: number, nullable: true }
+        passScore: { type: number }
+        passed: { type: boolean, nullable: true }
+        failed: { type: boolean, nullable: true }
+        needsReview: { type: boolean, nullable: true }
+        reviewReason: { type: string, nullable: true }
+        comment: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time, nullable: true }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/GradingItem' }
+    GradingTaskListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/GradingTask' }
+    GradingTaskPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/GradingTask' }
+    GradingItemPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/GradingItem' }
+    GradingTaskResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/GradingTask' }
+    BatchConfirmGradingTasksRequest:
+      type: object
+      properties:
+        examId: { type: string, nullable: true }
+        courseName: { type: string, nullable: true }
+        scoreBand: { $ref: '#/components/schemas/ScoreBandKey', nullable: true }
+        includeFailed:
+          type: boolean
+          default: false
+          description: Include failed papers after teacher focused review.
+        onlyAutoGraded:
+          type: boolean
+          default: true
+          description: When true, pending tasks are skipped instead of being auto-graded first.
+    BatchGradingTaskOperation:
+      type: object
+      properties:
+        matchedCount: { type: integer }
+        processedCount: { type: integer }
+        skippedFailedCount: { type: integer }
+        skippedPendingCount: { type: integer }
+        skippedReviewedCount: { type: integer }
+        message: { type: string }
+    BatchGradingTaskOperationResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/BatchGradingTaskOperation' }
+    ReviewGradingTaskRequest:
+      type: object
+      required: [finalScore]
+      properties:
+        finalScore: { type: number, minimum: 0 }
+        comment: { type: string }
+    ReviewGradingItemRequest:
+      type: object
+      required: [finalScore]
+      properties:
+        finalScore: { type: number, minimum: 0 }
+        comment: { type: string }
+    PublishScoreResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                examId: { type: string }
+                publishedCount: { type: integer }
+                publishedAt: { type: string, format: date-time }
+    ScoreBandKey:
+      type: string
+      enum: [FAILED, S60_69, S70_79, S80_89, S90_100]
+      description: Final score percent band. FAILED means below 60%; S90_100 means 90% or above.
+    ScoreBandSummary:
+      type: object
+      properties:
+        key: { $ref: '#/components/schemas/ScoreBandKey' }
+        label: { type: string }
+        minPercent: { type: integer, nullable: true }
+        maxPercent: { type: integer, nullable: true }
+        count: { type: integer }
+    ScoreSummaryItem:
+      type: object
+      properties:
+        gradingTaskId: { type: string }
+        answerSheetId: { type: string }
+        studentId: { type: string }
+        studentName: { type: string }
+        objectiveScore: { type: number, nullable: true }
+        subjectiveScore: { type: number, nullable: true }
+        finalScore: { type: number }
+        rank: { type: integer }
+    ExamScoreSummary:
+      type: object
+      properties:
+        examId: { type: string }
+        examTitle: { type: string }
+        totalScore: { type: number }
+        reviewedCount: { type: integer }
+        submittedCount: { type: integer }
+        averageScore: { type: number }
+        highestScore: { type: number }
+        lowestScore: { type: number }
+        scoreBands:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreBandSummary' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreSummaryItem' }
+    ExamScoreSummaryResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ExamScoreSummary' }
+    ExamScoreSummaryPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/ExamScoreSummary' }
+    ScoreSummaryItemPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/ScoreSummaryItem' }
+    ScoreReport:
+      type: object
+      properties:
+        id: { type: string }
+        examId: { type: string }
+        examTitle: { type: string }
+        courseName: { type: string }
+        studentId: { type: string }
+        studentName: { type: string }
+        className: { type: string }
+        totalScore: { type: number }
+        score: { type: number }
+        rank: { type: integer, nullable: true }
+        weakKnowledgePoints:
+          type: array
+          items: { type: string }
+        feedback: { type: string }
+    ScoreReportListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/ScoreReport' }
+    LectureDraft:
+      type: object
+      properties:
+        content: { type: string }
+        status: { type: string, enum: [draft, regenerated, approved] }
+        riskTags:
+          type: array
+          items: { type: string }
+        updatedAt: { type: string, format: date-time }
+    ReviewReport:
+      type: object
+      properties:
+        examId: { type: string }
+        examTitle: { type: string }
+        averageScore: { type: number }
+        passRate: { type: number }
+        weakKnowledgePoints:
+          type: array
+          items: { type: string }
+        studentSegments:
+          type: array
+          items: { type: string }
+        lectureDraft: { $ref: '#/components/schemas/LectureDraft' }
+    ReviewReportPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/ReviewReport' }
+    ReviewReportResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ReviewReport' }
+    ScoreBandResponse:
+      type: object
+      properties:
+        label: { type: string }
+        count: { type: integer }
+        ratio: { type: number }
+    QuestionPerformanceResponse:
+      type: object
+      properties:
+        questionId: { type: string }
+        order: { type: integer }
+        title: { type: string }
+        maxScore: { type: number }
+        averageScore: { type: number }
+        scoreRate: { type: number }
+        weaknessTags:
+          type: array
+          items: { type: string }
+    KnowledgeWeaknessResponse:
+      type: object
+      properties:
+        knowledgePoint: { type: string }
+        scoreRate: { type: number }
+        level: { type: string, enum: [GOOD, WARNING, RISK] }
+        suggestion: { type: string }
+    StudentLayerInsightResponse:
+      type: object
+      properties:
+        layer: { type: string }
+        count: { type: integer }
+        suggestion: { type: string }
+    AiLectureDraftResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/AiLectureDraft' }
+    AiLectureDraft:
+      type: object
+      properties:
+        id: { type: string }
+        examId: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [DRAFT, REVIEWING, APPROVED, FAILED] }
+        generatedAt: { type: string, format: date-time }
+        confidence: { type: number }
+        riskLabels:
+          type: array
+          items: { type: string }
+        outline:
+          type: array
+          items: { type: string }
+        content: { type: string }
+        teacherEditedContent: { type: string, nullable: true }
+        approvedAt: { type: string, format: date-time, nullable: true }
+        artifactId: { type: string, nullable: true }
+    ReviewArtifact:
+      type: object
+      properties:
+        id: { type: string }
+        examId: { type: string }
+        artifactType: { type: string, enum: [REVIEW_REPORT_MARKDOWN, LECTURE_DRAFT_MARKDOWN, SCORE_SUMMARY_CSV] }
+        fileName: { type: string }
+        objectKey: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        checksumSha256: { type: string }
+        createdAt: { type: string, format: date-time }
+        downloadUrl: { type: string, nullable: true }
+    ReviewArtifactResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ReviewArtifact' }
+    CreateReviewArtifactRequest:
+      type: object
+      required: [artifactType]
+      properties:
+        artifactType: { type: string, enum: [REVIEW_REPORT_MARKDOWN, LECTURE_DRAFT_MARKDOWN, SCORE_SUMMARY_CSV] }
+    ApproveLectureDraftRequest:
+      type: object
+      properties:
+        teacherEditedContent: { type: string }
+    ExamReviewReport:
+      type: object
+      properties:
+        examId: { type: string }
+        examTitle: { type: string }
+        courseName: { type: string }
+        totalScore: { type: number }
+        averageScore: { type: number }
+        passRate: { type: number }
+        submittedCount: { type: integer }
+        reviewedCount: { type: integer }
+        scoreBands:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreBandResponse' }
+        questionPerformances:
+          type: array
+          items: { $ref: '#/components/schemas/QuestionPerformanceResponse' }
+        knowledgeWeaknesses:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeWeaknessResponse' }
+        studentLayerInsights:
+          type: array
+          items: { $ref: '#/components/schemas/StudentLayerInsightResponse' }
+        lectureDraft: { $ref: '#/components/schemas/AiLectureDraft' }
+        artifacts:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewArtifact' }
+    ExamReviewReportResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/ExamReviewReport' }
+    ExamReviewReportPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageResponse'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: '#/components/schemas/ExamReviewReport' }

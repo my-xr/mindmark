@@ -1,0 +1,55 @@
+{
+  "runId": "20260722125234",
+  "studentUsername": "20260722120655",
+  "studentPassword": "Mindmark123",
+  "classId": "class-3c84f634-39d2-4264-b904-bd06ba0c4428",
+  "className": "MindMark 视觉验收班级",
+  "courseId": "course-4277e72a-c8ff-41cf-9d88-924f2147eed4",
+  "examId": "exam-5b844c93-ef52-4605-aa29-eb05655206ba",
+  "examTitle": "100分混合题型上机考试 20260722125234",
+  "examStatus": "ONGOING",
+  "paperId": "paper-a8aaa4ab-b96d-4c38-84fd-4ec3cc2e15ae",
+  "paperTitle": "100分混合题型上机考试试卷 20260722125234",
+  "paperTotalScore": 100.0,
+  "paperQuestionCount": 47,
+  "studentExamStatus": "ONGOING",
+  "answerSheetId": "AS-exam-5b844c93-ef52-4605-aa29-eb05655206ba-student-a797822e-e938-4794-993e-839f83f244a5",
+  "composition": [
+    {
+      "type": "SINGLE_CHOICE",
+      "label": "单选题",
+      "count": 10,
+      "score": 10
+    },
+    {
+      "type": "MULTIPLE_CHOICE",
+      "label": "多选题",
+      "count": 10,
+      "score": 20
+    },
+    {
+      "type": "TRUE_FALSE",
+      "label": "判断题",
+      "count": 10,
+      "score": 10
+    },
+    {
+      "type": "FILL_BLANK",
+      "label": "填空题",
+      "count": 10,
+      "score": 10
+    },
+    {
+      "type": "SHORT_ANSWER",
+      "label": "简答题",
+      "count": 4,
+      "score": 20
+    },
+    {
+      "type": "PROGRAMMING",
+      "label": "编程题",
+      "count": 3,
+      "score": 30
+    }
+  ]
+}

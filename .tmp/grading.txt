@@ -1,0 +1,275 @@
+package com.mindmark.server.modules.grading.service;
+
+import com.mindmark.server.common.api.ErrorCode;
+import com.mindmark.server.common.exception.BusinessException;
+import com.mindmark.server.modules.answer.domain.AnswerItemEntity;
+import com.mindmark.server.modules.answer.domain.AnswerSheetEntity;
+import com.mindmark.server.modules.answer.domain.AnswerSheetStatus;
+import com.mindmark.server.modules.answer.repository.AnswerSheetRepository;
+import com.mindmark.server.modules.grading.domain.GradingItemEntity;
+import com.mindmark.server.modules.grading.domain.GradingTaskEntity;
+import com.mindmark.server.modules.grading.domain.GradingTaskStatus;
+import com.mindmark.server.modules.grading.dto.GradingTaskResponse;
+import com.mindmark.server.modules.grading.dto.ReviewGradingItemRequest;
+import com.mindmark.server.modules.grading.dto.ReviewGradingTaskRequest;
+import com.mindmark.server.modules.grading.repository.GradingTaskRepository;
+import com.mindmark.server.modules.paper.domain.PaperEntity;
+import com.mindmark.server.modules.paper.domain.PaperQuestionEntity;
+import com.mindmark.server.modules.paper.repository.PaperRepository;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class GradingTaskService {
+
+    private final GradingTaskRepository gradingTaskRepository;
+    private final AnswerSheetRepository answerSheetRepository;
+    private final PaperRepository paperRepository;
+    private final ObjectiveGradingPolicy objectiveGradingPolicy;
+    private final GradingTaskMapper mapper;
+
+    public GradingTaskService(
+        GradingTaskRepository gradingTaskRepository,
+        AnswerSheetRepository answerSheetRepository,
+        PaperRepository paperRepository,
+        ObjectiveGradingPolicy objectiveGradingPolicy,
+        GradingTaskMapper mapper
+    ) {
+        this.gradingTaskRepository = gradingTaskRepository;
+        this.answerSheetRepository = answerSheetRepository;
+        this.paperRepository = paperRepository;
+        this.objectiveGradingPolicy = objectiveGradingPolicy;
+        this.mapper = mapper;
+    }
+
+    @Transactional(readOnly = true)
+    public List<GradingTaskResponse> listTasks(String examId) {
+        List<GradingTaskEntity> tasks = examId == null || examId.isBlank()
+            ? gradingTaskRepository.findAllByOrderByUpdatedAtDesc()
+            : gradingTaskRepository.findByExamIdOrderByUpdatedAtDesc(examId);
+        return tasks.stream().map(task -> mapper.toResponse(task, false)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public GradingTaskResponse getTask(String gradingTaskId) {
+        return mapper.toResponse(findTaskWithItems(gradingTaskId), true);
+    }
+
+    @Transactional
+    public GradingTaskEntity createTaskForSubmittedAnswerSheet(String answerSheetId) {
+        return gradingTaskRepository.findByAnswerSheetId(answerSheetId)
+            .orElseGet(() -> createNewTask(answerSheetId));
+    }
+
+    @Transactional
+    public GradingTaskResponse autoGrade(String gradingTaskId) {
+        GradingTaskEntity task = findTaskWithItems(gradingTaskId);
+        applyAutoGrade(task);
+        return mapper.toResponse(gradingTaskRepository.save(task), true);
+    }
+
+    @Transactional
+    public GradingTaskResponse reviewItem(String gradingTaskId, String questionId, ReviewGradingItemRequest request) {
+        GradingTaskEntity task = findTaskWithItems(gradingTaskId);
+        if (task.getStatus() == GradingTaskStatus.PENDING) {
+            applyAutoGrade(task);
+        }
+
+        GradingItemEntity item = task.getItems().stream()
+            .filter(candidate -> candidate.getQuestion().getId().equals(questionId) || candidate.getId().equals(questionId))
+            .findFirst()
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Grading item not found"));
+        validateItemScore(item, request.finalScore());
+
+        OffsetDateTime now = OffsetDateTime.now();
+        item.setFinalScore(request.finalScore());
+        item.setComment(request.comment());
+        item.setCorrect(request.finalScore().compareTo(item.getMaxScore()) >= 0);
+        item.setUpdatedAt(now);
+        recalculateTaskScoreFromItems(task, now);
+
+        return mapper.toResponse(gradingTaskRepository.save(task), true);
+    }
+
+    @Transactional
+    public GradingTaskResponse review(String gradingTaskId, ReviewGradingTaskRequest request) {
+        GradingTaskEntity task = findTaskWithItems(gradingTaskId);
+        validateFinalScore(task, request.finalScore());
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (task.getStatus() == GradingTaskStatus.PENDING) {
+            applyAutoGrade(task);
+        }
+
+        BigDecimal objectiveScore = task.getObjectiveScore() == null ? BigDecimal.ZERO : task.getObjectiveScore();
+        BigDecimal subjectiveScore = request.finalScore().subtract(objectiveScore);
+        if (subjectiveScore.compareTo(BigDecimal.ZERO) < 0) {
+            subjectiveScore = BigDecimal.ZERO;
+        }
+
+        task.setSubjectiveScore(subjectiveScore);
+        task.setFinalScore(request.finalScore());
+        task.setComment(request.comment());
+        task.setStatus(GradingTaskStatus.REVIEWED);
+        task.setReviewedAt(now);
+        task.setUpdatedAt(now);
+
+        AnswerSheetEntity answerSheet = task.getAnswerSheet();
+        answerSheet.setStatus(AnswerSheetStatus.GRADED);
+        answerSheet.setUpdatedAt(now);
+
+        return mapper.toResponse(gradingTaskRepository.save(task), true);
+    }
+
+    private GradingTaskEntity createNewTask(String answerSheetId) {
+        AnswerSheetEntity answerSheet = answerSheetRepository.findWithItemsById(answerSheetId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Answer sheet not found"));
+        if (answerSheet.getStatus() != AnswerSheetStatus.SUBMITTED && answerSheet.getStatus() != AnswerSheetStatus.GRADING) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Only submitted answer sheets can create grading tasks");
+        }
+
+        PaperEntity paper = paperRepository.findWithQuestionsById(answerSheet.getExam().getPaper().getId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Paper not found"));
+        OffsetDateTime now = OffsetDateTime.now();
+
+        GradingTaskEntity task = new GradingTaskEntity();
+        task.setId("GT-" + answerSheet.getId());
+        task.setExam(answerSheet.getExam());
+        task.setAnswerSheet(answerSheet);
+        task.setStudentId(answerSheet.getStudentId());
+        task.setStudentName(answerSheet.getStudentName());
+        task.setStatus(GradingTaskStatus.PENDING);
+        task.setObjectiveScore(BigDecimal.ZERO);
+        task.setSubjectiveScore(BigDecimal.ZERO);
+        task.setCreatedAt(now);
+        task.setUpdatedAt(now);
+
+        for (PaperQuestionEntity paperQuestion : distinctPaperQuestions(paper)) {
+            GradingItemEntity item = new GradingItemEntity();
+            item.setId(task.getId() + "-" + paperQuestion.getQuestion().getId());
+            item.setGradingTask(task);
+            item.setQuestion(paperQuestion.getQuestion());
+            item.setQuestionType(paperQuestion.getQuestion().getType());
+            item.setMaxScore(paperQuestion.getScore());
+            item.setObjective(objectiveGradingPolicy.isObjective(paperQuestion.getQuestion().getType()));
+            item.setCreatedAt(now);
+            item.setUpdatedAt(now);
+            task.getItems().add(item);
+        }
+
+        answerSheet.setStatus(AnswerSheetStatus.GRADING);
+        answerSheet.setUpdatedAt(now);
+        return gradingTaskRepository.save(task);
+    }
+
+    private List<PaperQuestionEntity> distinctPaperQuestions(PaperEntity paper) {
+        return paper.getQuestions().stream()
+            .collect(
+                LinkedHashMap<String, PaperQuestionEntity>::new,
+                (map, item) -> map.putIfAbsent(item.getId(), item),
+                LinkedHashMap::putAll
+            )
+            .values()
+            .stream()
+            .toList();
+    }
+
+    private void applyAutoGrade(GradingTaskEntity task) {
+        OffsetDateTime now = OffsetDateTime.now();
+        Map<String, AnswerItemEntity> answers = task.getAnswerSheet().getItems().stream()
+            .collect(
+                LinkedHashMap::new,
+                (map, item) -> map.put(item.getQuestionId(), item),
+                LinkedHashMap::putAll
+            );
+
+        BigDecimal objectiveScore = BigDecimal.ZERO;
+        boolean allObjective = true;
+        for (GradingItemEntity item : task.getItems()) {
+            if (!Boolean.TRUE.equals(item.getObjective())) {
+                allObjective = false;
+                item.setUpdatedAt(now);
+                continue;
+            }
+            AnswerItemEntity answer = answers.get(item.getQuestion().getId());
+            ObjectiveGradingPolicy.ObjectiveGradingResult result = objectiveGradingPolicy.grade(
+                item.getQuestion(),
+                answer == null ? null : answer.getAnswerJson(),
+                item.getMaxScore()
+            );
+            item.setAutoScore(result.score());
+            item.setFinalScore(result.score());
+            item.setCorrect(result.correct());
+            item.setComment(Boolean.TRUE.equals(result.correct()) ? "Auto graded: correct" : "Auto graded: answer mismatch");
+            item.setUpdatedAt(now);
+            objectiveScore = objectiveScore.add(result.score() == null ? BigDecimal.ZERO : result.score());
+        }
+
+        task.setObjectiveScore(objectiveScore);
+        task.setSubjectiveScore(BigDecimal.ZERO);
+        task.setAiScore(objectiveScore);
+        task.setFinalScore(allObjective ? objectiveScore : null);
+        task.setStatus(GradingTaskStatus.AI_CHECKED);
+        task.setUpdatedAt(now);
+    }
+
+    private void recalculateTaskScoreFromItems(GradingTaskEntity task, OffsetDateTime now) {
+        BigDecimal objectiveScore = BigDecimal.ZERO;
+        BigDecimal subjectiveScore = BigDecimal.ZERO;
+        BigDecimal finalScore = BigDecimal.ZERO;
+        boolean allItemsReviewed = true;
+
+        for (GradingItemEntity item : task.getItems()) {
+            BigDecimal itemScore = item.getFinalScore();
+            if (itemScore == null) {
+                allItemsReviewed = false;
+                continue;
+            }
+            finalScore = finalScore.add(itemScore);
+            if (Boolean.TRUE.equals(item.getObjective())) {
+                objectiveScore = objectiveScore.add(itemScore);
+            } else {
+                subjectiveScore = subjectiveScore.add(itemScore);
+            }
+        }
+
+        task.setObjectiveScore(objectiveScore);
+        task.setSubjectiveScore(subjectiveScore);
+        task.setAiScore(objectiveScore.add(subjectiveScore));
+        task.setFinalScore(allItemsReviewed ? finalScore : null);
+        task.setStatus(allItemsReviewed ? GradingTaskStatus.REVIEWED : GradingTaskStatus.AI_CHECKED);
+        task.setReviewedAt(allItemsReviewed ? now : task.getReviewedAt());
+        task.setUpdatedAt(now);
+
+        if (allItemsReviewed) {
+            AnswerSheetEntity answerSheet = task.getAnswerSheet();
+            answerSheet.setStatus(AnswerSheetStatus.GRADED);
+            answerSheet.setUpdatedAt(now);
+        }
+    }
+
+    private GradingTaskEntity findTaskWithItems(String gradingTaskId) {
+        return gradingTaskRepository.findWithItemsById(gradingTaskId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Grading task not found"));
+    }
+
+    private void validateFinalScore(GradingTaskEntity task, BigDecimal finalScore) {
+        BigDecimal totalScore = task.getExam().getTotalScore();
+        if (finalScore.compareTo(totalScore) > 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Final score cannot exceed exam total score");
+        }
+    }
+
+    private void validateItemScore(GradingItemEntity item, BigDecimal finalScore) {
+        if (finalScore.compareTo(item.getMaxScore()) > 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Item final score cannot exceed item max score");
+        }
+    }
+}
+
+

@@ -1,0 +1,325 @@
+﻿package com.mindmark.server.modules.auth.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import cn.dev33.satoken.stp.StpUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mindmark.server.common.api.ErrorCode;
+import com.mindmark.server.common.exception.BusinessException;
+import com.mindmark.server.modules.auth.domain.AuthUserEntity;
+import com.mindmark.server.modules.auth.domain.RoleCode;
+import com.mindmark.server.modules.auth.domain.RosterImportTaskEntity;
+import com.mindmark.server.modules.auth.domain.StudentProfileEntity;
+import com.mindmark.server.modules.auth.domain.UserStatus;
+import com.mindmark.server.modules.auth.dto.ResetPasswordResponse;
+import com.mindmark.server.modules.auth.dto.RosterImportErrorResponse;
+import com.mindmark.server.modules.auth.dto.RosterImportResponse;
+import com.mindmark.server.modules.auth.dto.StudentAccountResponse;
+import com.mindmark.server.modules.auth.dto.StudentImportRowRequest;
+import com.mindmark.server.modules.auth.dto.StudentRosterImportRequest;
+import com.mindmark.server.modules.auth.repository.AuthUserRepository;
+import com.mindmark.server.modules.auth.repository.RosterImportTaskRepository;
+import com.mindmark.server.modules.auth.repository.StudentProfileRepository;
+import com.mindmark.server.modules.auth.repository.TeacherClassAssignmentRepository;
+import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class StudentAccountService {
+
+    private static final TypeReference<List<RosterImportErrorResponse>> ERROR_LIST_TYPE = new TypeReference<>() {
+    };
+
+    private final AuthContextService authContextService;
+    private final AuthUserRepository authUserRepository;
+    private final StudentProfileRepository studentProfileRepository;
+    private final RosterImportTaskRepository rosterImportTaskRepository;
+    private final PasswordHashService passwordHashService;
+    private final AuthAuditService authAuditService;
+    private final TeacherClassAssignmentRepository teacherClassAssignmentRepository;
+    private final ObjectMapper objectMapper;
+
+    public StudentAccountService(
+        AuthContextService authContextService,
+        AuthUserRepository authUserRepository,
+        StudentProfileRepository studentProfileRepository,
+        RosterImportTaskRepository rosterImportTaskRepository,
+        PasswordHashService passwordHashService,
+        AuthAuditService authAuditService,
+        TeacherClassAssignmentRepository teacherClassAssignmentRepository,
+        ObjectMapper objectMapper
+    ) {
+        this.authContextService = authContextService;
+        this.authUserRepository = authUserRepository;
+        this.studentProfileRepository = studentProfileRepository;
+        this.rosterImportTaskRepository = rosterImportTaskRepository;
+        this.passwordHashService = passwordHashService;
+        this.authAuditService = authAuditService;
+        this.teacherClassAssignmentRepository = teacherClassAssignmentRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    public byte[] downloadTemplate() {
+        String template = "\uFEFFstudentNo,name,email,className,grade,major\r\n"
+            + "202601234567,\u5F20\u4E09,zhangsan@example.com,\u8F6F\u4EF6\u5DE5\u7A0B 1 \u73ED,2026,\u8F6F\u4EF6\u5DE5\u7A0B\r\n"
+            + "202601234568,\u674E\u56DB,lisi@example.com,\u8F6F\u4EF6\u5DE5\u7A0B 1 \u73ED,2026,\u8F6F\u4EF6\u5DE5\u7A0B\r\n";
+        return template.getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Transactional
+    public RosterImportResponse importStudents(
+        String authorizationHeader,
+        String userIdHeader,
+        String rolesHeader,
+        StudentRosterImportRequest request
+    ) {
+        AuthUserEntity operator = requireAccountManager(authorizationHeader, userIdHeader, rolesHeader);
+        String classId = normalize(request == null ? null : request.classId());
+        String className = normalize(request == null ? null : request.className());
+        List<StudentImportRowRequest> rows = request == null || request.students() == null ? List.of() : request.students();
+        if (classId == null || className == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "classId and className are required");
+        }
+        if (rows.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "students must not be empty");
+        }
+        assertCanManageClass(operator, classId);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        String taskId = "roster-" + UUID.randomUUID();
+        List<RosterImportErrorResponse> errors = new ArrayList<>();
+        List<StudentAccountResponse> createdStudents = new ArrayList<>();
+        Set<String> seenInRequest = new HashSet<>();
+        int skippedCount = 0;
+
+        for (int index = 0; index < rows.size(); index += 1) {
+            StudentImportRowRequest row = rows.get(index);
+            int rowNumber = index + 1;
+            String studentNo = normalize(row == null ? null : row.studentNo());
+            String name = normalize(row == null ? null : row.name());
+            if (studentNo == null || name == null) {
+                errors.add(new RosterImportErrorResponse(rowNumber, studentNo, "Student number and name are required"));
+                continue;
+            }
+            if (studentNo.length() < 6) {
+                errors.add(new RosterImportErrorResponse(rowNumber, studentNo, "Student number must contain at least 6 characters for initial password"));
+                continue;
+            }
+            if (!seenInRequest.add(studentNo)) {
+                skippedCount += 1;
+                continue;
+            }
+            if (studentProfileRepository.findByStudentNo(studentNo).isPresent()
+                || authUserRepository.existsByUsernameIgnoreCase(studentNo)) {
+                skippedCount += 1;
+                continue;
+            }
+
+            String userId = "u-student-" + UUID.randomUUID();
+            String profileId = "student-" + UUID.randomUUID();
+            String email = normalize(row.email());
+            if (email == null) {
+                email = studentNo + "@student.mindmark.local";
+            }
+
+            AuthUserEntity user = new AuthUserEntity();
+            user.setId(userId);
+            user.setName(name);
+            user.setEmail(email);
+            user.setUsername(studentNo);
+            user.setPasswordHash(passwordHashService.hash(initialPassword(studentNo)));
+            user.setMustChangePassword(true);
+            user.setPasswordUpdatedAt(now);
+            user.setLastLoginAt(null);
+            user.setAccountSource("ROSTER_IMPORT");
+            user.setStatus(UserStatus.ACTIVE);
+            user.setStudentId(profileId);
+            user.setRoles(new LinkedHashSet<>(Set.of(RoleCode.STUDENT)));
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
+            authUserRepository.save(user);
+
+            StudentProfileEntity profile = new StudentProfileEntity();
+            profile.setId(profileId);
+            profile.setUserId(userId);
+            profile.setStudentNo(studentNo);
+            profile.setClassId(classId);
+            profile.setClassName(normalize(row.className()) == null ? className : normalize(row.className()));
+            profile.setGrade(normalize(row.grade()));
+            profile.setMajor(normalize(row.major()));
+            profile.setCreatedAt(now);
+            profile.setUpdatedAt(now);
+            studentProfileRepository.save(profile);
+
+            createdStudents.add(toStudentAccountResponse(profile, user));
+        }
+
+        String status = errors.isEmpty() ? "SUCCEEDED" : createdStudents.isEmpty() ? "FAILED" : "PARTIAL_FAILED";
+        RosterImportTaskEntity task = new RosterImportTaskEntity();
+        task.setId(taskId);
+        task.setOperatorId(operator.getId());
+        task.setClassId(classId);
+        task.setClassName(className);
+        task.setStatus(status);
+        task.setTotalCount(rows.size());
+        task.setCreatedCount(createdStudents.size());
+        task.setSkippedCount(skippedCount);
+        task.setFailedCount(errors.size());
+        task.setErrorReportJson(toJson(errors));
+        task.setCreatedAt(now);
+        task.setFinishedAt(now);
+        rosterImportTaskRepository.save(task);
+
+        authAuditService.record(operator.getId(), "IMPORT_STUDENT_ROSTER", null, status,
+            "classId=" + classId + ", total=" + rows.size() + ", created=" + createdStudents.size()
+                + ", skipped=" + skippedCount + ", failed=" + errors.size());
+
+        return new RosterImportResponse(
+            taskId,
+            status,
+            rows.size(),
+            createdStudents.size(),
+            skippedCount,
+            errors.size(),
+            errors,
+            createdStudents
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public RosterImportResponse getImportTask(String authorizationHeader, String userIdHeader, String rolesHeader, String taskId) {
+        AuthUserEntity operator = requireAccountManager(authorizationHeader, userIdHeader, rolesHeader);
+        RosterImportTaskEntity task = rosterImportTaskRepository.findById(taskId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Roster import task not found"));
+        assertCanManageClass(operator, task.getClassId());
+        return new RosterImportResponse(
+            task.getId(),
+            task.getStatus(),
+            task.getTotalCount(),
+            task.getCreatedCount(),
+            task.getSkippedCount(),
+            task.getFailedCount(),
+            parseErrors(task.getErrorReportJson()),
+            List.of()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentAccountResponse> listClassStudents(
+        String authorizationHeader,
+        String userIdHeader,
+        String rolesHeader,
+        String classId
+    ) {
+        AuthUserEntity operator = requireAccountManager(authorizationHeader, userIdHeader, rolesHeader);
+        assertCanManageClass(operator, classId);
+        return studentProfileRepository.findByClassIdOrderByStudentNoAsc(classId).stream()
+            .map(profile -> authUserRepository.findById(profile.getUserId())
+                .map(user -> toStudentAccountResponse(profile, user))
+                .orElse(null))
+            .filter(java.util.Objects::nonNull)
+            .toList();
+    }
+
+    @Transactional
+    public ResetPasswordResponse resetPassword(
+        String authorizationHeader,
+        String userIdHeader,
+        String rolesHeader,
+        String studentId
+    ) {
+        AuthUserEntity operator = requireAccountManager(authorizationHeader, userIdHeader, rolesHeader);
+        StudentProfileEntity profile = studentProfileRepository.findById(studentId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Student profile not found"));
+        assertCanManageClass(operator, profile.getClassId());
+        AuthUserEntity user = authUserRepository.findById(profile.getUserId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Student account not found"));
+        if (profile.getStudentNo().length() < 6) {
+            throw new BusinessException(ErrorCode.CONFLICT, "Student number is invalid for password reset");
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        user.setPasswordHash(passwordHashService.hash(initialPassword(profile.getStudentNo())));
+        user.setMustChangePassword(true);
+        user.setPasswordUpdatedAt(now);
+        user.setUpdatedAt(now);
+        authUserRepository.save(user);
+        authAuditService.record(operator.getId(), "RESET_STUDENT_PASSWORD", user.getId(), "SUCCESS",
+            "studentNo=" + profile.getStudentNo() + ", classId=" + profile.getClassId());
+        return new ResetPasswordResponse(profile.getId(), user.getUsername(), true);
+    }
+
+    private AuthUserEntity requireAccountManager(String authorizationHeader, String userIdHeader, String rolesHeader) {
+        AuthUserEntity user = authContextService.getCurrentAuthUser(authorizationHeader, userIdHeader, rolesHeader);
+        StpUtil.checkRoleOr(RoleCode.ADMIN.name(), RoleCode.TEACHER.name(), RoleCode.TA.name());
+        return user;
+    }
+
+    private void assertCanManageClass(AuthUserEntity operator, String classId) {
+        if (operator.getRoles().contains(RoleCode.ADMIN)) {
+            return;
+        }
+        if (teacherClassAssignmentRepository.existsByUserIdAndClassId(operator.getId(), classId)) {
+            return;
+        }
+        authAuditService.record(operator.getId(), "CLASS_SCOPE_CHECK", null, "FAILED", "classId=" + classId);
+        throw new BusinessException(ErrorCode.FORBIDDEN, "No permission to manage this class");
+    }
+
+    private String initialPassword(String studentNo) {
+        return studentNo.substring(studentNo.length() - 6);
+    }
+
+    private StudentAccountResponse toStudentAccountResponse(StudentProfileEntity profile, AuthUserEntity user) {
+        return new StudentAccountResponse(
+            profile.getId(),
+            user.getId(),
+            user.getUsername(),
+            user.getName(),
+            user.getEmail(),
+            profile.getStudentNo(),
+            profile.getClassId(),
+            profile.getClassName(),
+            profile.getGrade(),
+            profile.getMajor(),
+            user.getStatus(),
+            user.isMustChangePassword(),
+            user.getLastLoginAt(),
+            profile.getCreatedAt()
+        );
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String toJson(List<RosterImportErrorResponse> errors) {
+        try {
+            return objectMapper.writeValueAsString(errors);
+        } catch (JsonProcessingException exception) {
+            return "[]";
+        }
+    }
+
+    private List<RosterImportErrorResponse> parseErrors(String json) {
+        try {
+            return objectMapper.readValue(json == null || json.isBlank() ? "[]" : json, ERROR_LIST_TYPE);
+        } catch (JsonProcessingException exception) {
+            return List.of();
+        }
+    }
+}
+
+

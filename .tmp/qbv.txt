@@ -1,0 +1,780 @@
+﻿<script setup lang="ts">
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+
+import { getErrorMessage } from '@/utils/errorMessage';
+
+import EmptyState from '@/components/common/EmptyState.vue';
+import ErrorState from '@/components/common/ErrorState.vue';
+import PageHeader from '@/components/common/PageHeader.vue';
+import StatusTag from '@/components/common/StatusTag.vue';
+import DifficultyTag from '@/components/question/DifficultyTag.vue';
+import QuestionPreviewCard from '@/components/question/QuestionPreviewCard.vue';
+import QuestionTypeTag from '@/components/question/QuestionTypeTag.vue';
+import { DIFFICULTY_META, QUESTION_TYPE_META } from '@/constants/question';
+import { QUESTION_STATUS_META } from '@/constants/status';
+import { listVisibleCourses } from '@/services/academicService';
+import { addQuestionToPaper, listPapers } from '@/services/paperService';
+import {
+  listQuestionsPage,
+  updateQuestion,
+  type QuestionUpsertRequest,
+} from '@/services/questionService';
+import type { Course } from '@/types/academic';
+import type { Paper } from '@/types/paper';
+import type {
+  Difficulty,
+  Question,
+  QuestionQuery,
+  QuestionSource,
+  QuestionStatus,
+  QuestionType,
+} from '@/types/question';
+
+type FilterState = Required<
+  Pick<QuestionQuery, 'keyword' | 'type' | 'difficulty' | 'status' | 'source' | 'courseId'>
+>;
+
+type EditQuestionForm = {
+  courseId: string;
+  title: string;
+  type: QuestionType;
+  difficulty: Difficulty;
+  knowledgePoints: string;
+  score: number;
+  answer: string;
+  analysis: string;
+  optionsJson: string;
+  scoringPointsJson: string;
+};
+
+const SOURCE_META: Record<QuestionSource, string> = {
+  MANUAL: '浜哄伐褰曞叆',
+  AI: 'AI 鐢熸垚',
+  IMPORT: '鎵归噺瀵煎叆',
+};
+
+const typeOptions = Object.entries(QUESTION_TYPE_META).map(([value, meta]) => ({
+  value: value as QuestionType,
+  label: meta.label,
+}));
+const difficultyOptions = Object.entries(DIFFICULTY_META).map(([value, meta]) => ({
+  value: value as Difficulty,
+  label: meta.label,
+}));
+const statusOptions = Object.entries(QUESTION_STATUS_META).map(([value, meta]) => ({
+  value: value as QuestionStatus,
+  label: meta.label,
+}));
+const sourceOptions = Object.entries(SOURCE_META).map(([value, label]) => ({
+  value: value as QuestionSource,
+  label,
+}));
+const pageSizeOptions = [10, 20, 50];
+
+const query = reactive<FilterState>({
+  keyword: '',
+  courseId: 'ALL',
+  type: 'ALL',
+  difficulty: 'ALL',
+  status: 'ALL',
+  source: 'ALL',
+});
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+});
+
+const courses = ref<Course[]>([]);
+const questions = ref<Question[]>([]);
+const selectedQuestion = ref<Question | null>(null);
+const loading = ref(false);
+const errorMessage = ref<string | null>(null);
+const isFilterCollapsed = ref(true);
+const feedbackMessage = ref<string | null>(null);
+const feedbackTone = ref<'success' | 'danger' | 'info'>('info');
+
+const papers = ref<Paper[]>([]);
+const paperLoading = ref(false);
+const composingQuestion = ref<Question | null>(null);
+const selectedPaperId = ref('');
+const editSaving = ref(false);
+const composingSaving = ref(false);
+const editingQuestion = ref<Question | null>(null);
+const editForm = reactive<EditQuestionForm>({
+  courseId: '',
+  title: '',
+  type: 'SINGLE_CHOICE',
+  difficulty: 'MEDIUM',
+  knowledgePoints: '',
+  score: 0,
+  answer: '',
+  analysis: '',
+  optionsJson: '[]',
+  scoringPointsJson: '[]',
+});
+
+const totalPages = computed(() => Math.max(Math.ceil(pagination.total / pagination.pageSize), 1));
+const pageRangeText = computed(() => {
+  if (pagination.total === 0) {
+    return '0-0';
+  }
+  const start = (pagination.page - 1) * pagination.pageSize + 1;
+  const end = Math.min(pagination.page * pagination.pageSize, pagination.total);
+
+  return `${start}-${end}`;
+});
+const availablePapers = computed(() => {
+  if (!composingQuestion.value) {
+    return [];
+  }
+
+  return papers.value.filter(
+    (paper) =>
+      paper.courseId === composingQuestion.value?.courseId &&
+      (paper.status === 'DRAFT' || paper.status === 'READY'),
+  );
+});
+
+const showFeedback = (message: string, tone: 'success' | 'danger' | 'info' = 'info') => {
+  feedbackMessage.value = message;
+  feedbackTone.value = tone;
+};
+
+const clearFeedback = () => {
+  feedbackMessage.value = null;
+};
+
+const loadQuestions = async () => {
+  loading.value = true;
+  errorMessage.value = null;
+
+  try {
+    const result = await listQuestionsPage({
+      ...query,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+    questions.value = result.items;
+    pagination.total = result.total;
+    selectedQuestion.value =
+      result.items.find((question) => question.id === selectedQuestion.value?.id) ??
+      result.items[0] ??
+      null;
+    if (pagination.page > totalPages.value) {
+      pagination.page = totalPages.value;
+    }
+  } catch (error) {
+    questions.value = [];
+    selectedQuestion.value = null;
+    pagination.total = 0;
+    errorMessage.value = getErrorMessage(error, '棰樺簱鍔犺浇澶辫触锛岃绋嶅悗閲嶈瘯');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadCourses = async () => {
+  try {
+    courses.value = await listVisibleCourses();
+  } catch {
+    courses.value = [];
+  }
+};
+
+const resetFilters = () => {
+  query.keyword = '';
+  query.courseId = 'ALL';
+  query.type = 'ALL';
+  query.difficulty = 'ALL';
+  query.status = 'ALL';
+  query.source = 'ALL';
+};
+
+const setPage = (page: number) => {
+  pagination.page = Math.min(Math.max(page, 1), totalPages.value);
+};
+
+const selectQuestion = (question: Question) => {
+  selectedQuestion.value = question;
+};
+
+const formatJson = (value: unknown) => JSON.stringify(value ?? [], null, 2);
+
+const openEdit = (question: Question) => {
+  clearFeedback();
+  selectedQuestion.value = question;
+  editingQuestion.value = question;
+  editForm.courseId = question.courseId;
+  editForm.title = question.title;
+  editForm.type = question.type;
+  editForm.difficulty = question.difficulty;
+  editForm.knowledgePoints = question.knowledgePoints.join('锛?);
+  editForm.score = question.score;
+  editForm.answer = Array.isArray(question.answer) ? question.answer.join(',') : question.answer;
+  editForm.analysis = question.analysis;
+  editForm.optionsJson = formatJson(question.options);
+  editForm.scoringPointsJson = formatJson(question.scoringPoints);
+};
+
+const closeEdit = () => {
+  editingQuestion.value = null;
+};
+
+const parseList = (value: string) =>
+  value
+    .split(/[锛?\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const parseJsonArray = <T,>(value: string, label: string): T[] => {
+  const parsed = JSON.parse(value || '[]') as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error(`${label} 蹇呴』鏄?JSON 鏁扮粍`);
+  }
+
+  return parsed as T[];
+};
+
+const buildUpdateRequest = (): QuestionUpsertRequest => ({
+  courseId: editForm.courseId,
+  title: editForm.title.trim(),
+  type: editForm.type,
+  difficulty: editForm.difficulty,
+  knowledgePoints: parseList(editForm.knowledgePoints),
+  score: Number(editForm.score) || 0,
+  answer: editForm.type === 'MULTIPLE_CHOICE' ? parseList(editForm.answer) : editForm.answer.trim(),
+  analysis: editForm.analysis.trim(),
+  options: parseJsonArray<QuestionUpsertRequest['options'][number]>(editForm.optionsJson, '閫夐」'),
+  scoringPoints: parseJsonArray<QuestionUpsertRequest['scoringPoints'][number]>(
+    editForm.scoringPointsJson,
+    '璇勫垎鐐?,
+  ),
+});
+
+const saveEdit = async () => {
+  if (!editingQuestion.value) {
+    return;
+  }
+  editSaving.value = true;
+  try {
+    const updated = await updateQuestion(editingQuestion.value.id, buildUpdateRequest());
+    selectedQuestion.value = updated;
+    editingQuestion.value = null;
+    showFeedback('棰樼洰宸蹭繚瀛橈紱濡備负宸查┏鍥?AI 棰橈紝灏嗚嚜鍔ㄩ噸鏂拌繘鍏ュ緟瀹℃牳銆?, 'success');
+    await loadQuestions();
+  } catch (error) {
+    showFeedback(getErrorMessage(error, '棰樼洰淇濆瓨澶辫触锛岃妫€鏌ヨ〃鍗曞唴瀹?), 'danger');
+  } finally {
+    editSaving.value = false;
+  }
+};
+
+const loadPaperOptions = async () => {
+  paperLoading.value = true;
+  try {
+    papers.value = await listPapers();
+  } catch (error) {
+    showFeedback(getErrorMessage(error, '璇曞嵎鍒楄〃鍔犺浇澶辫触'), 'danger');
+  } finally {
+    paperLoading.value = false;
+  }
+};
+
+const openCompose = async (question: Question) => {
+  clearFeedback();
+  selectedQuestion.value = question;
+  composingQuestion.value = question;
+  selectedPaperId.value = '';
+  await loadPaperOptions();
+  selectedPaperId.value = availablePapers.value[0]?.id ?? '';
+};
+
+const closeCompose = () => {
+  composingQuestion.value = null;
+  selectedPaperId.value = '';
+};
+
+const confirmCompose = async () => {
+  if (!composingQuestion.value || !selectedPaperId.value) {
+    return;
+  }
+  composingSaving.value = true;
+  try {
+    await addQuestionToPaper(selectedPaperId.value, composingQuestion.value);
+    showFeedback('棰樼洰宸插姞鍏ヨ瘯鍗凤紝鍙墠寰€鈥滆瘯鍗蜂笌缁勫嵎鈥濈户缁皟鏁撮搴忓拰鍒嗗€笺€?, 'success');
+    closeCompose();
+  } catch (error) {
+    showFeedback(getErrorMessage(error, '鍔犲叆璇曞嵎澶辫触锛岃纭璇剧▼涓庤瘯鍗蜂竴鑷?), 'danger');
+  } finally {
+    composingSaving.value = false;
+  }
+};
+
+onMounted(() => {
+  void loadCourses();
+});
+
+watch(
+  query,
+  () => {
+    if (pagination.page !== 1) {
+      pagination.page = 1;
+      return;
+    }
+    void loadQuestions();
+  },
+  { deep: true, immediate: true },
+);
+
+watch(
+  () => pagination.pageSize,
+  () => {
+    if (pagination.page !== 1) {
+      pagination.page = 1;
+      return;
+    }
+    void loadQuestions();
+  },
+);
+
+watch(
+  () => pagination.page,
+  () => {
+    void loadQuestions();
+  },
+);
+</script>
+
+<template>
+  <div>
+    <PageHeader title="棰樺簱绠＄悊" description="妫€绱€佸鏍镐笌缁存姢鍙敤浜庣粍鍗风殑璇曢璧勬簮銆?>
+      <template #actions>
+        <RouterLink class="secondary-button" to="/teacher/ai-questions">AI 鍑洪</RouterLink>
+        <button class="primary-button" type="button">鏂板棰樼洰</button>
+      </template>
+    </PageHeader>
+
+    <p v-if="feedbackMessage" :class="['question-feedback', `question-feedback--${feedbackTone}`]">
+      {{ feedbackMessage }}
+    </p>
+
+    <section class="filter-card filter-card--compact question-filter-card">
+      <div class="section-title">
+        <div>
+          <h2>棰樼洰绛涢€?/h2>
+          <p class="muted-text">榛樿灞曠ず棣栬鏉′欢锛涘琛岀瓫閫夊彲灞曞紑鍏ㄩ儴銆?/p>
+        </div>
+        <div class="section-actions">
+          <button
+            class="secondary-button filter-toggle-button"
+            type="button"
+            :aria-expanded="!isFilterCollapsed"
+            @click="isFilterCollapsed = !isFilterCollapsed"
+          >
+            {{ isFilterCollapsed ? '灞曞紑鍏ㄩ儴' : '鏀惰捣鍒颁竴琛? }}
+          </button>
+          <button class="secondary-button" type="button" @click="resetFilters">閲嶇疆</button>
+        </div>
+      </div>
+      <div
+        :class="[
+          'filter-grid',
+          'collapsible-filter-body',
+          { 'collapsible-filter-body--single-row': isFilterCollapsed },
+        ]"
+      >
+        <label class="form-field form-field--wide">
+          <span>鍏抽敭璇?/span>
+          <input
+            v-model.trim="query.keyword"
+            class="text-input"
+            type="search"
+            placeholder="鎼滅储棰樺共銆佺煡璇嗙偣鎴栬В鏋?
+          />
+        </label>
+        <label class="form-field">
+          <span>璇剧▼</span>
+          <select v-model="query.courseId" class="select-input">
+            <option value="ALL">鍏ㄩ儴璇剧▼</option>
+            <option v-for="course in courses" :key="course.id" :value="course.id">
+              {{ course.name }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>棰樺瀷</span>
+          <select v-model="query.type" class="select-input">
+            <option value="ALL">鍏ㄩ儴</option>
+            <option v-for="option in typeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>闅惧害</span>
+          <select v-model="query.difficulty" class="select-input">
+            <option value="ALL">鍏ㄩ儴</option>
+            <option v-for="option in difficultyOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>鐘舵€?/span>
+          <select v-model="query.status" class="select-input">
+            <option value="ALL">鍏ㄩ儴</option>
+            <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>鏉ユ簮</span>
+          <select v-model="query.source" class="select-input">
+            <option value="ALL">鍏ㄩ儴</option>
+            <option v-for="option in sourceOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <div class="split-layout">
+      <section class="content-card question-table">
+        <div class="question-table-toolbar">
+          <div>
+            <span class="eyebrow-text">棰樺簱鍒楄〃</span>
+            <strong>鍏?{{ pagination.total }} 閬撻</strong>
+          </div>
+          <span class="muted-text">褰撳墠鏄剧ず {{ pageRangeText }}</span>
+        </div>
+
+        <div class="table-row table-head question-row">
+          <span>棰樺共</span>
+          <span>棰樺瀷/闅惧害</span>
+          <span>鏉ユ簮/鐘舵€?/span>
+          <span>鏇存柊鏃堕棿</span>
+          <span>鎿嶄綔</span>
+        </div>
+
+        <p v-if="loading" class="muted-text loading-text">姝ｅ湪鍔犺浇棰樺簱...</p>
+        <ErrorState v-else-if="errorMessage" title="鏁版嵁鍔犺浇澶辫触" :description="errorMessage">
+          <button class="secondary-button" type="button" @click="loadQuestions">閲嶈瘯</button>
+        </ErrorState>
+        <EmptyState
+          v-else-if="!questions.length"
+          title="鏆傛棤鍖归厤棰樼洰"
+          description="璇疯皟鏁寸瓫閫夋潯浠讹紝鎴栭€氳繃鏂板棰樼洰 / AI 鍑洪琛ュ厖棰樺簱銆?
+        />
+
+        <button
+          v-for="question in questions"
+          v-else
+          :key="question.id"
+          :class="[
+            'table-row',
+            'question-row',
+            { 'question-row--active': selectedQuestion?.id === question.id },
+          ]"
+          type="button"
+          @click="selectQuestion(question)"
+        >
+          <span class="question-title-cell">
+            <strong>{{ question.title }}</strong>
+            <small
+              >{{ question.courseName ? question.courseName + ' 路 ' : ''
+              }}{{ question.knowledgePoints.join(' / ') }}</small
+            >
+          </span>
+          <span class="tag-list">
+            <QuestionTypeTag :type="question.type" short />
+            <DifficultyTag :difficulty="question.difficulty" />
+          </span>
+          <span class="tag-list">
+            <StatusTag :label="SOURCE_META[question.source]" tone="default" />
+            <StatusTag
+              :label="QUESTION_STATUS_META[question.status].label"
+              :tone="QUESTION_STATUS_META[question.status].tone"
+            />
+          </span>
+          <span class="muted-text">{{ question.updatedAt }}</span>
+          <span class="inline-actions">
+            <span
+              class="action-link"
+              role="button"
+              tabindex="0"
+              @click.stop="selectQuestion(question)"
+              >鏌ョ湅</span
+            >
+            <span class="action-link" role="button" tabindex="0" @click.stop="openEdit(question)"
+              >缂栬緫</span
+            >
+            <span class="action-link" role="button" tabindex="0" @click.stop="openCompose(question)"
+              >缁勫嵎</span
+            >
+          </span>
+        </button>
+
+        <div v-if="!loading && !errorMessage && pagination.total > 0" class="question-pagination">
+          <span class="muted-text">
+            绗?{{ pagination.page }} / {{ totalPages }} 椤?路 鍏?{{ pagination.total }} 鏉?          </span>
+          <label class="page-size-field">
+            <span>姣忛〉</span>
+            <select v-model.number="pagination.pageSize" class="select-input">
+              <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
+            </select>
+          </label>
+          <div class="inline-actions">
+            <button
+              class="secondary-button"
+              type="button"
+              :disabled="pagination.page <= 1"
+              @click="setPage(pagination.page - 1)"
+            >
+              涓婁竴椤?            </button>
+            <button
+              class="secondary-button"
+              type="button"
+              :disabled="pagination.page >= totalPages"
+              @click="setPage(pagination.page + 1)"
+            >
+              涓嬩竴椤?            </button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="preview-pane">
+        <QuestionPreviewCard v-if="selectedQuestion" :item="selectedQuestion" />
+        <EmptyState
+          v-else
+          title="璇烽€夋嫨棰樼洰"
+          description="鐐瑰嚮宸︿晶棰樼洰鍚庡湪姝ゆ煡鐪嬪畬鏁撮骞层€佺瓟妗堜笌瑙ｆ瀽銆?
+        />
+      </aside>
+    </div>
+
+    <section v-if="editingQuestion" class="content-card question-edit-panel">
+      <div class="section-title">
+        <div>
+          <h2>缂栬緫棰樼洰</h2>
+          <p class="muted-text">
+            鏀寔淇棰樺共銆佺瓟妗堛€佽В鏋愪笌 JSON 缁撴瀯鍖栭€夐」锛涢┏鍥炵殑 AI 棰樹繚瀛樺悗浼氶噸鏂拌繘鍏ュ緟瀹℃牳銆?          </p>
+        </div>
+        <button class="secondary-button" type="button" @click="closeEdit">鍏抽棴</button>
+      </div>
+
+      <div class="question-edit-grid">
+        <label class="form-field form-field--full">
+          <span>棰樺共</span>
+          <textarea v-model.trim="editForm.title" class="textarea-input" rows="3" />
+        </label>
+        <label class="form-field">
+          <span>璇剧▼</span>
+          <select v-model="editForm.courseId" class="select-input">
+            <option v-for="course in courses" :key="course.id" :value="course.id">
+              {{ course.name }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>棰樺瀷</span>
+          <select v-model="editForm.type" class="select-input">
+            <option v-for="option in typeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>闅惧害</span>
+          <select v-model="editForm.difficulty" class="select-input">
+            <option v-for="option in difficultyOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>鍒嗗€?/span>
+          <input v-model.number="editForm.score" class="text-input" min="0" type="number" />
+        </label>
+        <label class="form-field">
+          <span>鐭ヨ瘑鐐?/span>
+          <input
+            v-model.trim="editForm.knowledgePoints"
+            class="text-input"
+            placeholder="澶氫釜鐭ヨ瘑鐐圭敤閫楀彿鍒嗛殧"
+          />
+        </label>
+        <label class="form-field">
+          <span>绛旀</span>
+          <input
+            v-model.trim="editForm.answer"
+            class="text-input"
+            placeholder="澶氶€夌瓟妗堢敤閫楀彿鍒嗛殧"
+          />
+        </label>
+        <label class="form-field form-field--full">
+          <span>瑙ｆ瀽</span>
+          <textarea v-model.trim="editForm.analysis" class="textarea-input" rows="3" />
+        </label>
+        <label class="form-field form-field--full">
+          <span>閫夐」 JSON</span>
+          <textarea v-model="editForm.optionsJson" class="textarea-input mono-input" rows="4" />
+        </label>
+        <label class="form-field form-field--full">
+          <span>璇勫垎鐐?JSON</span>
+          <textarea
+            v-model="editForm.scoringPointsJson"
+            class="textarea-input mono-input"
+            rows="4"
+          />
+        </label>
+      </div>
+      <div class="section-actions question-panel-actions">
+        <button class="secondary-button" type="button" @click="closeEdit">鍙栨秷</button>
+        <button class="primary-button" type="button" :disabled="editSaving" @click="saveEdit">
+          {{ editSaving ? '淇濆瓨涓?..' : '淇濆瓨棰樼洰' }}
+        </button>
+      </div>
+    </section>
+
+    <section v-if="composingQuestion" class="content-card question-compose-panel">
+      <div class="section-title">
+        <div>
+          <h2>鍔犲叆璇曞嵎</h2>
+          <p class="muted-text">浠呭睍绀轰笌棰樼洰璇剧▼涓€鑷达紝涓斾粛鍙紪杈戠殑鑽夌/宸插氨缁瘯鍗枫€?/p>
+        </div>
+        <button class="secondary-button" type="button" @click="closeCompose">鍏抽棴</button>
+      </div>
+      <div class="compose-summary">
+        <strong>{{ composingQuestion.title }}</strong>
+        <span class="muted-text">{{ composingQuestion.courseName }}</span>
+      </div>
+      <p v-if="paperLoading" class="muted-text loading-text">姝ｅ湪鍔犺浇璇曞嵎...</p>
+      <EmptyState
+        v-else-if="!availablePapers.length"
+        title="鏆傛棤鍙姞鍏ヨ瘯鍗?
+        description="璇峰厛鍦ㄢ€滆瘯鍗蜂笌缁勫嵎鈥濆垱寤哄悓璇剧▼鐨勮崏绋胯瘯鍗凤紝鎴栨鏌ヨ瘯鍗风姸鎬併€?
+      />
+      <template v-else>
+        <label class="form-field">
+          <span>閫夋嫨璇曞嵎</span>
+          <select v-model="selectedPaperId" class="select-input">
+            <option v-for="paper in availablePapers" :key="paper.id" :value="paper.id">
+              {{ paper.title }} 路 {{ paper.totalScore }} 鍒?路 {{ paper.status }}
+            </option>
+          </select>
+        </label>
+        <div class="section-actions question-panel-actions">
+          <RouterLink class="secondary-button" to="/teacher/papers">鍓嶅線璇曞嵎涓庣粍鍗?/RouterLink>
+          <button
+            class="primary-button"
+            type="button"
+            :disabled="composingSaving || !selectedPaperId"
+            @click="confirmCompose"
+          >
+            {{ composingSaving ? '鍔犲叆涓?..' : '纭鍔犲叆' }}
+          </button>
+        </div>
+      </template>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.question-feedback {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--radius-sm);
+  background: var(--mm-color-card);
+}
+
+.question-feedback--success {
+  border-color: color-mix(in srgb, var(--mm-color-success) 36%, var(--mm-color-border));
+  background: color-mix(in srgb, var(--mm-color-success) 8%, var(--mm-color-card));
+}
+
+.question-feedback--danger {
+  border-color: color-mix(in srgb, var(--mm-color-danger) 34%, var(--mm-color-border));
+  background: color-mix(in srgb, var(--mm-color-danger) 7%, var(--mm-color-card));
+}
+
+.question-table-toolbar,
+.question-pagination,
+.compose-summary,
+.question-panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.question-table-toolbar {
+  padding: var(--space-3) 12px var(--space-2);
+}
+
+.question-table-toolbar > div,
+.compose-summary {
+  display: grid;
+  gap: 2px;
+}
+
+.question-pagination {
+  margin-top: var(--space-3);
+  padding: var(--space-3) 12px 12px;
+  border-top: 1px solid var(--mm-color-border);
+}
+
+.page-size-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--mm-color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.page-size-field .select-input {
+  width: 82px;
+}
+
+.question-edit-panel,
+.question-compose-panel {
+  margin-top: var(--space-4);
+}
+
+.question-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.question-panel-actions {
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
+.mono-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+.action-link {
+  cursor: pointer;
+}
+
+@media (max-width: 960px) {
+  .question-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .question-pagination,
+  .question-table-toolbar,
+  .question-panel-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>
+

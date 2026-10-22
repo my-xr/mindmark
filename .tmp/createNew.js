@@ -1,0 +1,1 @@
+﻿const fs=require('fs'); const t=fs.readFileSync('apps/mindmark-server/src/main/java/com/mindmark/server/modules/grading/service/GradingTaskService.java','utf8'); const i=t.indexOf('private GradingTaskEntity createNewTask'); console.log(t.slice(i, i+3500));

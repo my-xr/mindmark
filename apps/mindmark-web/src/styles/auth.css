@@ -1,0 +1,102 @@
+.auth-card--portal {
+  --auth-accent: #2563eb;
+  --auth-accent-soft: #dbeafe;
+  --auth-hero-start: #0f172a;
+  --auth-hero-end: #2563eb;
+  --mm-color-primary: var(--auth-accent);
+  --mm-color-primary-hover: color-mix(in srgb, var(--auth-accent) 84%, #0f172a);
+}
+
+.auth-card--admin {
+  --auth-accent: #7c3aed;
+  --auth-accent-soft: #ede9fe;
+  --auth-hero-start: #1e1b4b;
+  --auth-hero-end: #7c3aed;
+}
+
+.auth-card--student {
+  --auth-accent: #0891b2;
+  --auth-accent-soft: #cffafe;
+  --auth-hero-start: #083344;
+  --auth-hero-end: #0891b2;
+}
+
+.auth-card--portal .auth-hero {
+  background:
+    radial-gradient(circle at 78% 18%, rgb(255 255 255 / 18%), transparent 12rem),
+    linear-gradient(135deg, var(--auth-hero-start) 0%, var(--auth-hero-end) 100%);
+}
+
+.auth-card--portal .auth-entry-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-entry-eyebrow {
+  width: fit-content;
+  padding: 4px 8px;
+  color: color-mix(in srgb, var(--auth-accent) 88%, #0f172a);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  background: var(--auth-accent-soft);
+  border-radius: 999px;
+}
+
+.auth-card--portal .auth-form-panel h2 {
+  margin: 4px 0 0;
+}
+
+.auth-entry-note {
+  margin: -10px 0 0;
+  color: var(--mm-color-text-tertiary);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.auth-card--portal .text-input:focus {
+  border-color: var(--auth-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-accent) 14%, transparent);
+}
+
+@media (width <= 820px) {
+  .auth-card--split.auth-card--portal {
+    grid-template-columns: 1fr;
+    width: min(560px, 100%);
+  }
+
+  .auth-card--portal .auth-hero {
+    min-height: 0;
+    gap: 24px;
+    padding: 28px;
+  }
+
+  .auth-card--portal .auth-hero-copy h1 {
+    max-width: none;
+    font-size: 28px;
+  }
+
+  .auth-card--portal .auth-feature-grid {
+    gap: 8px;
+  }
+
+  .auth-card--portal .auth-feature-grid article {
+    padding: 10px;
+  }
+
+  .auth-card--portal .auth-form-panel {
+    gap: 20px;
+    padding: 28px;
+  }
+}
+
+@media (width <= 560px) {
+  .auth-card--portal .auth-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-card--portal .auth-hero,
+  .auth-card--portal .auth-form-panel {
+    padding: 22px;
+  }
+}

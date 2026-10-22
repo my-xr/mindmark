@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${MINDMARK_DB_HOST}:${MINDMARK_DB_PORT:5432}/${MINDMARK_DB_NAME}
+    username: ${MINDMARK_DB_USERNAME}
+    password: ${MINDMARK_DB_PASSWORD}
+  data:
+    redis:
+      host: ${MINDMARK_REDIS_HOST}
+      port: ${MINDMARK_REDIS_PORT:6379}
+      password: ${MINDMARK_REDIS_PASSWORD:}
+
+mindmark:
+  security:
+    strict-secrets: true
+  ai:
+    key-secret: ${MINDMARK_AI_KEY_SECRET}
+  storage:
+    minio:
+      endpoint: ${MINDMARK_MINIO_ENDPOINT}
+      access-key: ${MINDMARK_MINIO_ACCESS_KEY}
+      secret-key: ${MINDMARK_MINIO_SECRET_KEY}
+      bucket: ${MINDMARK_MINIO_BUCKET}
